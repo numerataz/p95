@@ -44,6 +44,7 @@ logs/
 # Python SDK
 sdk/python/__pycache__/
 sdk/python/*.egg-info/
+*.egg-info/
 sdk/python/dist/
 sdk/python/build/
 sdk/python/.eggs/
