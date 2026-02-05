@@ -1,0 +1,53 @@
+[tools]
+go = "1.23"
+node = "20"
+python = "3.12"
+
+[tasks.build-web]
+description = "Build the web UI"
+dir = "web"
+run = "npm install && npm run build"
+
+[tasks.build-sdk]
+description = "Install the Python SDK in development mode"
+dir = "sdk/python"
+run = "pip install -e ."
+
+[tasks.build-go]
+description = "Build the Go binary with embedded web UI"
+depends = ["build-web"]
+run = "go build -o sixtyseven ./cmd/sixtyseven"
+
+[tasks.build]
+description = "Build everything (web, sdk, go binary)"
+depends = ["build-web", "build-sdk", "build-go"]
+
+[tasks.cli]
+description = "Build and run sixtyseven CLI"
+depends = ["build"]
+run = "./sixtyseven {{arg(name=\"cmd\", default=\"tui\")}} {{option(name=\"logdir\", default=\"./logs\")}}"
+
+[tasks.tui]
+description = "Build and run sixtyseven TUI"
+depends = ["build"]
+raw = true
+run = "./sixtyseven tui --logdir {{option(name=\"logdir\", default=\"./logs\")}}"
+
+[tasks.serve]
+description = "Build and run sixtyseven web server"
+depends = ["build"]
+run = "./sixtyseven serve --logdir {{option(name=\"logdir\", default=\"./logs\")}}"
+
+[tasks.demo]
+description = "Run the demo Python script"
+depends = ["build-sdk"]
+run = "python examples/local_mode_demo.py"
+
+[tasks.dev]
+description = "Run web UI in development mode"
+dir = "web"
+run = "npm run dev"
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = "rm -f sixtyseven && rm -rf web/dist"

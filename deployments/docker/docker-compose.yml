@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  # PostgreSQL with TimescaleDB
+  db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: sixtyseven-db
+    environment:
+      POSTGRES_USER: sixtyseven
+      POSTGRES_PASSWORD: sixtyseven
+      POSTGRES_DB: sixtyseven
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sixtyseven"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (optional, for caching and pub/sub)
+  redis:
+    image: redis:7-alpine
+    container_name: sixtyseven-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Server (development with live reload)
+  api:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.api.dev
+    container_name: sixtyseven-api
+    environment:
+      - PORT=8080
+      - DATABASE_URL=postgres://sixtyseven:sixtyseven@db:5432/sixtyseven?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=change-me-in-production
+      - DEPLOYMENT_MODE=self-hosted
+      - ADMIN_EMAIL=admin@localhost
+      - ADMIN_PASSWORD=admin123
+      - DEBUG=true
+    volumes:
+      - ../..:/app
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Web Dashboard
+  web:
+    build:
+      context: ../..
+      dockerfile: web/Dockerfile
+    container_name: sixtyseven-web
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
