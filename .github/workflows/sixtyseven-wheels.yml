@@ -36,32 +36,32 @@ jobs:
           python-version: "3.12"
 
       - name: Build web UI
-        working-directory: reporter/web
+        working-directory: web
         run: npm ci && npm run build
 
       - name: Build sixtyseven binary
         if: runner.os != 'Windows'
-        working-directory: reporter
+        working-directory: .
         env:
           CGO_ENABLED: "0"
         run: go build -trimpath -ldflags="-s -w" -o sixtyseven ./cmd/sixtyseven
 
       - name: Build sixtyseven binary (Windows)
         if: runner.os == 'Windows'
-        working-directory: reporter
+        working-directory: .
         env:
           CGO_ENABLED: "0"
         run: go build -trimpath -ldflags="-s -w" -o sixtyseven.exe ./cmd/sixtyseven
 
       - name: Stage binary into Python package
-        run: python reporter/sdk/python/scripts/stage_binary.py
+        run: python sdk/python/scripts/stage_binary.py
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
       - name: Build wheel (macOS/Windows)
         if: runner.os != 'Linux'
-        working-directory: reporter/sdk/python
+        working-directory: sdk/python
         run: uv build --wheel --out-dir dist
 
       - name: Install cibuildwheel (Linux)
@@ -72,13 +72,13 @@ jobs:
         if: runner.os == 'Linux'
         env:
           CIBW_MANYLINUX_X86_64: manylinux2014
-        run: python -m cibuildwheel reporter/sdk/python --output-dir reporter/sdk/python/dist
+        run: python -m cibuildwheel sdk/python --output-dir sdk/python/dist
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: sixtyseven-wheels-${{ runner.os }}
-          path: reporter/sdk/python/dist/*.whl
+          path: sdk/python/dist/*.whl
 
   publish:
     runs-on: ubuntu-latest
