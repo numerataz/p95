@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sixtyseven"
-version = "0.3.0"
+version = "0.4.0"
 description = "Python SDK for Sixtyseven ML experiment tracking"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.8"
 authors = [
-    { name = "Sixtyseven Team" }
+    { name = "NinetyFive" }
 ]
 keywords = ["ml", "machine-learning", "experiment-tracking", "metrics", "training"]
 classifiers = [
@@ -45,9 +45,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/sixtyseven/sixtyseven"
-Documentation = "https://docs.sixtyseven.ai"
-Repository = "https://github.com/sixtyseven/sixtyseven"
+Homepage = "https://github.com/ninetyfive-gg/sixtyseven"
+Documentation = "https://github.com/ninetyfive-gg/sixtyseven"
+Repository = "https://github.com/ninetyfive-gg/sixtyseven"
 
 [project.scripts]
 sixtyseven = "sixtyseven.cli:main"
