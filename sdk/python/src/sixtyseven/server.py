@@ -89,6 +89,8 @@ class ServerManager:
         if self._is_port_in_use():
             # Server already running - just set the active run so UI navigates
             self._set_active_run()
+            if self.open_browser:
+                self._open_browser()
             print(f"Sixtyseven: Navigating to run in existing viewer at {self.url}")
             self._started = True
             return self.url
