@@ -2,7 +2,7 @@ package messages
 
 import (
 	"github.com/google/uuid"
-	"sixtyseven/pkg/client"
+	"github.com/ninetyfive/sixtyseven/pkg/client"
 )
 
 // Navigation messages
@@ -71,16 +71,7 @@ type ContinuationsLoadedMsg struct {
 	Continuations []client.Continuation
 }
 
-// Real-time messages
-type MetricsSubscribedMsg struct {
-	Channel <-chan client.MetricUpdate
-}
-
-type MetricUpdateMsg struct {
-	Update client.MetricUpdate
-}
-
-// Tick message for periodic updates
+// Tick message for periodic updates (polling-based)
 type TickMsg struct{}
 
 // Error message

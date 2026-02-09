@@ -7,9 +7,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"sixtyseven/internal/tui/messages"
-	"sixtyseven/internal/tui/styles"
-	"sixtyseven/pkg/client"
+	"github.com/ninetyfive/sixtyseven/internal/tui/messages"
+	"github.com/ninetyfive/sixtyseven/internal/tui/styles"
+	"github.com/ninetyfive/sixtyseven/pkg/client"
 )
 
 // RunsListModel is the runs list view model

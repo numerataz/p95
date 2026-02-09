@@ -1,5 +1,5 @@
-// Package localserver provides a lightweight HTTP server for local mode.
-package localserver
+// Package server provides a lightweight HTTP server for local mode.
+package server
 
 import (
 	"context"
@@ -17,9 +17,9 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	"sixtyseven/internal/domain"
-	"sixtyseven/internal/storage"
-	"sixtyseven/internal/storage/file"
+	"github.com/ninetyfive/sixtyseven/internal/domain"
+	"github.com/ninetyfive/sixtyseven/internal/storage"
+	"github.com/ninetyfive/sixtyseven/internal/storage/file"
 )
 
 // Server represents the local HTTP server.

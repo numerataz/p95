@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 export interface AppConfig {
-  mode: "local" | "hosted";
+  mode: "local";
   version: string;
   logdir?: string;
   features: {
@@ -13,27 +13,27 @@ export interface AppConfig {
 }
 
 interface ConfigState {
-  config: AppConfig | null;
+  config: AppConfig;
   isLoading: boolean;
   error: string | null;
   fetchConfig: () => Promise<void>;
   isLocalMode: () => boolean;
 }
 
-const defaultHostedConfig: AppConfig = {
-  mode: "hosted",
+const defaultConfig: AppConfig = {
+  mode: "local",
   version: "0.1.0",
   features: {
-    auth: true,
-    teams: true,
-    apiKeys: true,
-    realtime: true,
+    auth: false,
+    teams: false,
+    apiKeys: false,
+    realtime: false,
   },
 };
 
 export const useConfigStore = create<ConfigState>((set, get) => ({
-  config: null,
-  isLoading: true,
+  config: defaultConfig,
+  isLoading: false,
   error: null,
 
   fetchConfig: async () => {
@@ -42,22 +42,16 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
       const response = await fetch("/api/v1/config");
 
-      if (!response.ok) {
-        // If config endpoint doesn't exist, assume hosted mode
-        set({ config: defaultHostedConfig, isLoading: false });
-        return;
+      if (response.ok) {
+        const config = await response.json();
+        set({ config: { ...defaultConfig, ...config }, isLoading: false });
+      } else {
+        set({ config: defaultConfig, isLoading: false });
       }
-
-      const config = await response.json();
-      set({ config, isLoading: false });
     } catch {
-      // Network error or API not available - assume hosted mode
-      set({ config: defaultHostedConfig, isLoading: false });
+      set({ config: defaultConfig, isLoading: false });
     }
   },
 
-  isLocalMode: () => {
-    const { config } = get();
-    return config?.mode === "local";
-  },
+  isLocalMode: () => true,
 }));

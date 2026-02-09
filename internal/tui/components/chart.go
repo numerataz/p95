@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"sixtyseven/internal/tui/styles"
+	"github.com/ninetyfive/sixtyseven/internal/tui/styles"
 
 	"github.com/NimbleMarkets/ntcharts/canvas"
 	"github.com/NimbleMarkets/ntcharts/canvas/graph"

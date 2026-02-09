@@ -21,12 +21,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"sixtyseven/internal/api/localserver"
-	"sixtyseven/internal/domain"
-	"sixtyseven/internal/storage/file"
-	"sixtyseven/internal/tui"
-	"sixtyseven/pkg/client"
-	"sixtyseven/web"
+	"github.com/ninetyfive/sixtyseven/internal/domain"
+	"github.com/ninetyfive/sixtyseven/internal/server"
+	"github.com/ninetyfive/sixtyseven/internal/storage/file"
+	"github.com/ninetyfive/sixtyseven/internal/tui"
+	"github.com/ninetyfive/sixtyseven/pkg/client"
+	"github.com/ninetyfive/sixtyseven/web"
 )
 
 func main() {
@@ -342,7 +342,7 @@ func tuiCmd(args []string) {
 	listener.Close()
 
 	// Start local server in background (no web UI needed for TUI mode)
-	srv, err := localserver.New(*logdir, nil)
+	srv, err := server.New(*logdir, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating server: %v\n", err)
 		os.Exit(1)
@@ -400,7 +400,7 @@ func serveCmd(args []string) {
 	webFS := web.DistFS()
 
 	// Create server
-	srv, err := localserver.New(*logdir, webFS)
+	srv, err := server.New(*logdir, webFS)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}

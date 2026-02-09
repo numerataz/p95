@@ -1,4 +1,5 @@
 # Binaries
+/bin/
 /build/
 *.exe
 *.exe~

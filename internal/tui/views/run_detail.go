@@ -9,10 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
 
-	"sixtyseven/internal/tui/components"
-	"sixtyseven/internal/tui/messages"
-	"sixtyseven/internal/tui/styles"
-	"sixtyseven/pkg/client"
+	"github.com/ninetyfive/sixtyseven/internal/tui/components"
+	"github.com/ninetyfive/sixtyseven/internal/tui/messages"
+	"github.com/ninetyfive/sixtyseven/internal/tui/styles"
+	"github.com/ninetyfive/sixtyseven/pkg/client"
 )
 
 // ViewMode represents the current view mode
@@ -58,8 +58,7 @@ type RunDetailModel struct {
 	// List view scroll offset
 	listOffset int
 
-	// Real-time updates
-	updateChan <-chan client.MetricUpdate
+	// Polling-based updates
 	lastUpdate time.Time
 
 	// Refresh state
@@ -279,10 +278,6 @@ func (m RunDetailModel) Update(msg tea.Msg) (RunDetailModel, tea.Cmd) {
 		// Load continuations
 		cmds = append(cmds, m.LoadContinuations())
 
-		if m.run.Status == "running" {
-			cmds = append(cmds, m.subscribeToUpdates())
-		}
-
 	case messages.ContinuationsLoadedMsg:
 		m.continuations = msg.Continuations
 		// Update all charts with continuation markers
@@ -342,18 +337,6 @@ func (m RunDetailModel) Update(msg tea.Msg) (RunDetailModel, tea.Cmd) {
 			}
 		}
 
-	case messages.MetricUpdateMsg:
-		m.lastUpdate = time.Now()
-		if chart, ok := m.charts[msg.Update.Name]; ok {
-			chart.AddPoint(msg.Update.Step, msg.Update.Value)
-		}
-		if info, ok := m.metricInfo[msg.Update.Name]; ok {
-			info.Previous = info.Latest
-			info.HasPrev = true
-			info.Latest = msg.Update.Value
-			info.PointCount++
-		}
-
 	case messages.ErrorMsg:
 		m.err = msg.Err
 		m.loading = false
@@ -392,17 +375,6 @@ func (m *RunDetailModel) adjustListScroll() {
 func (m RunDetailModel) toggleChartRenderMode() {
 	for _, chart := range m.charts {
 		chart.ToggleRenderMode()
-	}
-}
-
-// subscribeToUpdates subscribes to WebSocket updates
-func (m RunDetailModel) subscribeToUpdates() tea.Cmd {
-	return func() tea.Msg {
-		ch, err := m.client.SubscribeMetrics(m.runID)
-		if err != nil {
-			return nil
-		}
-		return messages.MetricsSubscribedMsg{Channel: ch}
 	}
 }
 

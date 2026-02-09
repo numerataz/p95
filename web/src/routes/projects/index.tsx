@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { FolderOpen, Activity } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
-export const Route = createFileRoute("/_local/projects/")({
+export const Route = createFileRoute("/projects/")({
   component: ProjectsPage,
 });
 

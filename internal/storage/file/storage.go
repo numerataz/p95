@@ -16,8 +16,8 @@ import (
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
 
-	"sixtyseven/internal/domain"
-	"sixtyseven/internal/storage"
+	"github.com/ninetyfive/sixtyseven/internal/domain"
+	"github.com/ninetyfive/sixtyseven/internal/storage"
 )
 
 // Storage implements the storage.Storage interface using local files.

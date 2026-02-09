@@ -18,7 +18,7 @@ import {
 } from "@/lib/utils";
 import { GitBranch, Clock, Server, ChevronLeft, RotateCcw } from "lucide-react";
 
-export const Route = createFileRoute("/_local/runs/$runId")({
+export const Route = createFileRoute("/runs/$runId")({
   component: LocalRunDetailPage,
 });
 

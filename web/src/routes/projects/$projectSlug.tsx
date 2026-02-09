@@ -23,7 +23,7 @@ import { ComparisonChart } from "@/components/metrics/comparison-chart";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { XAxisMode, YAxisScale } from "@/components/metrics/metric-chart";
 
-export const Route = createFileRoute("/_local/projects/$projectSlug")({
+export const Route = createFileRoute("/projects/$projectSlug")({
   component: ProjectRunsPage,
 });
 
