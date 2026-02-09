@@ -39,8 +39,7 @@ type SystemInfo struct {
 // Run represents a single training run
 type Run struct {
 	ID              uuid.UUID      `json:"id"`
-	AppID           uuid.UUID      `json:"app_id"`
-	UserID          uuid.UUID      `json:"user_id"`
+	Project         string         `json:"project"`
 	Name            string         `json:"name"`
 	Description     *string        `json:"description,omitempty"`
 	Status          RunStatus      `json:"status"`
@@ -53,10 +52,6 @@ type Run struct {
 	EndedAt         *time.Time     `json:"ended_at,omitempty"`
 	DurationSeconds *float64       `json:"duration_seconds,omitempty"`
 	CreatedAt       time.Time      `json:"created_at"`
-
-	// Populated by joins
-	App  *App  `json:"app,omitempty"`
-	User *User `json:"user,omitempty"`
 
 	// Computed fields
 	LatestMetrics map[string]float64 `json:"latest_metrics,omitempty"`
@@ -89,8 +84,7 @@ type RunStatusUpdate struct {
 
 // RunListOptions contains options for listing runs
 type RunListOptions struct {
-	AppID    uuid.UUID
-	UserID   *uuid.UUID
+	Project  string
 	Status   *RunStatus
 	Tags     []string
 	Limit    int

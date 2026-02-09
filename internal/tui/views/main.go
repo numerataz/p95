@@ -10,10 +10,10 @@ import (
 	"github.com/google/uuid"
 	zone "github.com/lrstanley/bubblezone"
 
-	"sixtyseven/internal/tui/components"
-	"sixtyseven/internal/tui/messages"
-	"sixtyseven/internal/tui/styles"
-	"sixtyseven/pkg/client"
+	"github.com/ninetyfive/sixtyseven/internal/tui/components"
+	"github.com/ninetyfive/sixtyseven/internal/tui/messages"
+	"github.com/ninetyfive/sixtyseven/internal/tui/styles"
+	"github.com/ninetyfive/sixtyseven/pkg/client"
 )
 
 // Zone ID prefixes for mouse tracking

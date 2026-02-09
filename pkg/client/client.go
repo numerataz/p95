@@ -10,40 +10,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 // Client is the API client for the TUI
 type Client struct {
 	baseURL    string
-	token      string
 	httpClient *http.Client
 }
 
-// Option is a client option
-type Option func(*Client)
-
-// WithToken sets the authentication token
-func WithToken(token string) Option {
-	return func(c *Client) {
-		c.token = token
-	}
-}
-
 // New creates a new API client
-func New(baseURL string, opts ...Option) *Client {
-	c := &Client{
+func New(baseURL string) *Client {
+	return &Client{
 		baseURL: baseURL,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
-
-	for _, opt := range opts {
-		opt(c)
-	}
-
-	return c
 }
 
 // request makes an HTTP request
@@ -63,9 +45,6 @@ func (c *Client) request(method, path string, body any) ([]byte, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
-	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -85,7 +64,7 @@ func (c *Client) request(method, path string, body any) ([]byte, error) {
 	return respBody, nil
 }
 
-// Team represents a team
+// Team represents a team (local mode: single "Local" team)
 type Team struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
@@ -94,7 +73,7 @@ type Team struct {
 	Role        string    `json:"role"`
 }
 
-// App represents an app
+// App represents an app (local mode: maps to project)
 type App struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
@@ -105,14 +84,14 @@ type App struct {
 
 // Run represents a run
 type Run struct {
-	ID              uuid.UUID         `json:"id"`
-	Name            string            `json:"name"`
-	Status          string            `json:"status"`
-	Tags            []string          `json:"tags"`
-	Config          map[string]any    `json:"config"`
-	StartedAt       time.Time         `json:"started_at"`
-	EndedAt         *time.Time        `json:"ended_at"`
-	DurationSeconds *float64          `json:"duration_seconds"`
+	ID              uuid.UUID          `json:"id"`
+	Name            string             `json:"name"`
+	Status          string             `json:"status"`
+	Tags            []string           `json:"tags"`
+	Config          map[string]any     `json:"config"`
+	StartedAt       time.Time          `json:"started_at"`
+	EndedAt         *time.Time         `json:"ended_at"`
+	DurationSeconds *float64           `json:"duration_seconds"`
 	LatestMetrics   map[string]float64 `json:"latest_metrics"`
 }
 
@@ -122,15 +101,6 @@ type Metric struct {
 	Name  string    `json:"name"`
 	Step  int64     `json:"step"`
 	Value float64   `json:"value"`
-}
-
-// MetricUpdate represents a real-time metric update
-type MetricUpdate struct {
-	RunID     uuid.UUID `json:"run_id"`
-	Name      string    `json:"name"`
-	Step      int64     `json:"step"`
-	Value     float64   `json:"value"`
-	Timestamp time.Time `json:"timestamp"`
 }
 
 // Continuation represents a point where the run was resumed
@@ -144,7 +114,7 @@ type Continuation struct {
 	Note         *string        `json:"note,omitempty"`
 }
 
-// GetTeams returns all teams for the authenticated user
+// GetTeams returns all teams (local mode returns single "Local" team)
 func (c *Client) GetTeams() ([]Team, error) {
 	data, err := c.request("GET", "/api/v1/teams", nil)
 	if err != nil {
@@ -159,7 +129,7 @@ func (c *Client) GetTeams() ([]Team, error) {
 	return teams, nil
 }
 
-// GetApps returns all apps for a team
+// GetApps returns all apps for a team (local mode: returns projects)
 func (c *Client) GetApps(teamSlug string) ([]App, error) {
 	data, err := c.request("GET", fmt.Sprintf("/api/v1/teams/%s/apps", teamSlug), nil)
 	if err != nil {
@@ -279,73 +249,4 @@ func (c *Client) GetContinuations(runID uuid.UUID) ([]Continuation, error) {
 	}
 
 	return resp.Continuations, nil
-}
-
-// SubscribeMetrics connects to the WebSocket for real-time metric updates
-func (c *Client) SubscribeMetrics(runID uuid.UUID) (<-chan MetricUpdate, error) {
-	// Convert HTTP URL to WebSocket URL
-	wsURL := c.baseURL
-	if len(wsURL) > 4 && wsURL[:4] == "http" {
-		wsURL = "ws" + wsURL[4:]
-	}
-	wsURL += fmt.Sprintf("/api/v1/ws/runs/%s/metrics", runID)
-
-	// Add auth header
-	header := http.Header{}
-	if c.token != "" {
-		header.Set("Authorization", "Bearer "+c.token)
-	}
-
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to WebSocket: %w", err)
-	}
-
-	ch := make(chan MetricUpdate, 100)
-
-	go func() {
-		defer close(ch)
-		defer conn.Close()
-
-		for {
-			_, message, err := conn.ReadMessage()
-			if err != nil {
-				return
-			}
-
-			var update MetricUpdate
-			if err := json.Unmarshal(message, &update); err != nil {
-				continue
-			}
-
-			select {
-			case ch <- update:
-			default:
-				// Channel full, skip
-			}
-		}
-	}()
-
-	return ch, nil
-}
-
-// Login authenticates and returns tokens
-func (c *Client) Login(email, password string) (string, error) {
-	data, err := c.request("POST", "/api/v1/auth/login", map[string]string{
-		"email":    email,
-		"password": password,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	var resp struct {
-		AccessToken string `json:"access_token"`
-	}
-	if err := json.Unmarshal(data, &resp); err != nil {
-		return "", fmt.Errorf("failed to unmarshal login response: %w", err)
-	}
-
-	c.token = resp.AccessToken
-	return resp.AccessToken, nil
 }

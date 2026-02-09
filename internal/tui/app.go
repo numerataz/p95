@@ -9,10 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
-	"sixtyseven/internal/tui/messages"
-	"sixtyseven/internal/tui/styles"
-	"sixtyseven/internal/tui/views"
-	"sixtyseven/pkg/client"
+	"github.com/ninetyfive/sixtyseven/internal/tui/messages"
+	"github.com/ninetyfive/sixtyseven/internal/tui/styles"
+	"github.com/ninetyfive/sixtyseven/internal/tui/views"
+	"github.com/ninetyfive/sixtyseven/pkg/client"
 )
 
 // App is the main TUI application model
