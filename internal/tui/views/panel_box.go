@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/ninetyfive/sixtyseven/internal/tui/styles"
+	"github.com/ninetyfive/p95/internal/tui/styles"
 )
 
 func renderPanelBox(width, height int, borderColor lipgloss.Color, title string, content string) string {

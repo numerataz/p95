@@ -4,18 +4,18 @@ services:
   # PostgreSQL with TimescaleDB
   db:
     image: timescale/timescaledb:latest-pg15
-    container_name: sixtyseven-db
+    container_name: p95-db
     environment:
-      POSTGRES_USER: sixtyseven
-      POSTGRES_PASSWORD: sixtyseven
-      POSTGRES_DB: sixtyseven
+      POSTGRES_USER: p95
+      POSTGRES_PASSWORD: p95
+      POSTGRES_DB: p95
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sixtyseven"]
+      test: ["CMD-SHELL", "pg_isready -U p95"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,7 +23,7 @@ services:
   # Redis (optional, for caching and pub/sub)
   redis:
     image: redis:7-alpine
-    container_name: sixtyseven-redis
+    container_name: p95-redis
     ports:
       - "6379:6379"
     volumes:
@@ -39,10 +39,10 @@ services:
     build:
       context: ../..
       dockerfile: deployments/docker/Dockerfile.api.dev
-    container_name: sixtyseven-api
+    container_name: p95-api
     environment:
       - PORT=8080
-      - DATABASE_URL=postgres://sixtyseven:sixtyseven@db:5432/sixtyseven?sslmode=disable
+      - DATABASE_URL=postgres://p95:p95@db:5432/p95?sslmode=disable
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=change-me-in-production
       - DEPLOYMENT_MODE=self-hosted
@@ -65,7 +65,7 @@ services:
     build:
       context: ../..
       dockerfile: web/Dockerfile
-    container_name: sixtyseven-web
+    container_name: p95-web
     ports:
       - "3000:80"
     depends_on:

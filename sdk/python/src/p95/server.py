@@ -1,4 +1,4 @@
-"""Server management for automatically starting the Sixtyseven viewer."""
+"""Server management for automatically starting the p95 viewer."""
 
 from __future__ import annotations
 
@@ -12,14 +12,14 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from sixtyseven.exceptions import ServerError
+from p95.exceptions import ServerError
 
 
 class ServerManager:
     """
-    Manages the Sixtyseven server lifecycle.
+    Manages the p95 server lifecycle.
 
-    Handles discovering, starting, and stopping the sixtyseven binary
+    Handles discovering, starting, and stopping the pnf binary
     for viewing training metrics in real-time.
 
     Usage:
@@ -29,7 +29,7 @@ class ServerManager:
         manager.stop()  # or let it auto-cleanup on exit
     """
 
-    BINARY_NAME = "sixtyseven"
+    BINARY_NAME = "pnf"
     DEFAULT_PORT = 6767
     DEFAULT_HOST = "localhost"
     HEALTH_CHECK_TIMEOUT = 10  # seconds
@@ -54,7 +54,7 @@ class ServerManager:
             port: Port to run the server on
             host: Host to bind the server to
             open_browser: Whether to open the browser automatically
-            binary_path: Explicit path to the sixtyseven binary (auto-discovered if not provided)
+            binary_path: Explicit path to the pnf binary (auto-discovered if not provided)
             keep_running: If True, don't stop the server when the manager is garbage collected
             project: Project name (used as fallback if run_id not provided)
             run_id: Run ID to open in the browser (opens specific run view)
@@ -91,7 +91,7 @@ class ServerManager:
             self._set_active_run()
             if self.open_browser:
                 self._open_browser()
-            print(f"Sixtyseven: Navigating to run in existing viewer at {self.url}")
+            print(f"p95: Navigating to run in existing viewer at {self.url}")
             self._started = True
             return self.url
 
@@ -99,8 +99,8 @@ class ServerManager:
         binary = self._find_binary()
         if not binary:
             raise ServerError(
-                "Could not find 'sixtyseven' binary. Please ensure it's installed and in your PATH, "
-                "or specify the path explicitly with server_binary='/path/to/sixtyseven'"
+                "Could not find 'pnf' binary. Please ensure it's installed and in your PATH, "
+                "or specify the path explicitly with server_binary='/path/to/pnf'"
             )
 
         # Build the command (we handle browser opening ourselves for project-specific URLs)
@@ -154,7 +154,7 @@ class ServerManager:
         if self.open_browser:
             self._open_browser()
 
-        print(f"Sixtyseven: Server started at {self.url}")
+        print(f"p95: Server started at {self.url}")
         return self.url
 
     def stop(self) -> None:
@@ -170,7 +170,7 @@ class ServerManager:
                 self._process.kill()
             self._process = None
             self._we_started_server = False
-            print("Sixtyseven: Server stopped")
+            print("p95: Server stopped")
 
     @property
     def url(self) -> str:
@@ -227,11 +227,11 @@ class ServerManager:
 
     def _find_binary(self) -> Optional[str]:
         """
-        Find the sixtyseven binary.
+        Find the pnf binary.
 
         Search order:
         1. Explicit binary_path if provided
-        2. SIXTYSEVEN_BINARY environment variable
+        2. P95_BINARY environment variable
         3. Bundled binary inside the Python package
         4. System PATH
         5. Common installation locations
@@ -247,11 +247,11 @@ class ServerManager:
             )
 
         # Check environment variable
-        env_binary = os.environ.get("SIXTYSEVEN_BINARY")
+        env_binary = os.environ.get("P95_BINARY")
         if env_binary:
             if os.path.isfile(env_binary) and os.access(env_binary, os.X_OK):
                 return env_binary
-            raise ServerError(f"SIXTYSEVEN_BINARY points to invalid path: {env_binary}")
+            raise ServerError(f"P95_BINARY points to invalid path: {env_binary}")
 
         # Check bundled binary in the package
         bundled_binary = self._bundled_binary_path()
@@ -325,23 +325,23 @@ class ServerManager:
 
         if system == "Darwin":
             return [
-                "/usr/local/bin/sixtyseven",
-                "/opt/homebrew/bin/sixtyseven",
-                str(home / ".local" / "bin" / "sixtyseven"),
-                str(home / "bin" / "sixtyseven"),
+                "/usr/local/bin/pnf",
+                "/opt/homebrew/bin/pnf",
+                str(home / ".local" / "bin" / "pnf"),
+                str(home / "bin" / "pnf"),
             ]
         elif system == "Windows":
             return [
-                str(home / "AppData" / "Local" / "sixtyseven" / "sixtyseven.exe"),
-                str(home / "scoop" / "shims" / "sixtyseven.exe"),
-                "C:\\Program Files\\sixtyseven\\sixtyseven.exe",
+                str(home / "AppData" / "Local" / "p95" / "pnf.exe"),
+                str(home / "scoop" / "shims" / "pnf.exe"),
+                "C:\\Program Files\\p95\\pnf.exe",
             ]
         else:  # Linux
             return [
-                "/usr/local/bin/sixtyseven",
-                "/usr/bin/sixtyseven",
-                str(home / ".local" / "bin" / "sixtyseven"),
-                str(home / "bin" / "sixtyseven"),
+                "/usr/local/bin/pnf",
+                "/usr/bin/pnf",
+                str(home / ".local" / "bin" / "pnf"),
+                str(home / "bin" / "pnf"),
             ]
 
     def _is_port_in_use(self) -> bool:
@@ -396,7 +396,7 @@ def start_server(
     open_browser: bool = True,
 ) -> str:
     """
-    Start the Sixtyseven viewer server.
+    Start the p95 viewer server.
 
     This starts a server that persists across multiple training runs.
     Unlike `Run(start_server=True)`, the server won't stop when a run ends.
@@ -405,7 +405,7 @@ def start_server(
     is safe and will just return the existing server URL.
 
     Args:
-        logdir: Directory containing logs. Defaults to SIXTYSEVEN_LOGDIR or ~/.sixtyseven/logs
+        logdir: Directory containing logs. Defaults to P95_LOGDIR or ~/.p95/logs
         port: Port to run on (default: 6767)
         host: Host to bind to (default: localhost)
         open_browser: Whether to open browser on first start (default: True)
@@ -414,16 +414,16 @@ def start_server(
         The server URL (e.g., "http://localhost:6767")
 
     Example:
-        import sixtyseven
+        import p95
 
         # Start server once at the beginning
-        sixtyseven.start_server()
+        p95.start_server()
 
         # Run multiple training stages - server stays alive
-        with sixtyseven.Run(project="my-project") as run:
+        with p95.Run(project="my-project") as run:
             ...
 
-        resumed = sixtyseven.resume(run.id, config={...})
+        resumed = p95.resume(run.id, config={...})
         with resumed:
             ...
 
@@ -433,7 +433,7 @@ def start_server(
 
     # Determine logdir
     if logdir is None:
-        logdir = os.environ.get("SIXTYSEVEN_LOGDIR", "~/.sixtyseven/logs")
+        logdir = os.environ.get("P95_LOGDIR", "~/.p95/logs")
 
     # Expand ~ in path
     logdir = os.path.expanduser(logdir)
@@ -456,7 +456,7 @@ def start_server(
 
 def stop_server() -> None:
     """
-    Stop the global Sixtyseven viewer server.
+    Stop the global p95 viewer server.
 
     This is optional - the server will keep running until the Python
     process exits, which is usually what you want for viewing results.

@@ -1,4 +1,4 @@
-"""Console entrypoint for the bundled sixtyseven CLI."""
+"""Console entrypoint for the bundled pnf CLI."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def _bundled_binary_path() -> Optional[str]:
     if not platform_id:
         return None
 
-    binary_name = "sixtyseven.exe" if platform.system() == "Windows" else "sixtyseven"
+    binary_name = "pnf.exe" if platform.system() == "Windows" else "pnf"
     base_dir = Path(__file__).resolve().parent
     candidate = base_dir / "bin" / platform_id / binary_name
     if candidate.is_file() and os.access(candidate, os.X_OK):
@@ -48,7 +48,7 @@ def _find_binary() -> Optional[str]:
     if bundled:
         return bundled
 
-    binary_name = "sixtyseven.exe" if platform.system() == "Windows" else "sixtyseven"
+    binary_name = "pnf.exe" if platform.system() == "Windows" else "pnf"
     return shutil.which(binary_name)
 
 
@@ -56,7 +56,7 @@ def main() -> None:
     binary = _find_binary()
     if not binary:
         print(
-            "Could not find 'sixtyseven' binary. Reinstall the package or set SIXTYSEVEN_BINARY.",
+            "Could not find 'pnf' binary. Reinstall the package or set P95_BINARY.",
             file=sys.stderr,
         )
         raise SystemExit(1)

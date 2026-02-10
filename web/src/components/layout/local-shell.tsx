@@ -65,7 +65,7 @@ export function LocalShell({ children }: LocalShellProps) {
         <div className="h-14 flex items-center px-4 border-b">
           <button onClick={goToProjects} className="flex items-center gap-2">
             <Activity className="h-6 w-6" />
-            {sidebarOpen && <span className="font-semibold">Sixtyseven</span>}
+            {sidebarOpen && <span className="font-semibold">p95</span>}
           </button>
         </div>
 

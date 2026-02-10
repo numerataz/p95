@@ -9,10 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
 
-	"github.com/ninetyfive/sixtyseven/internal/tui/components"
-	"github.com/ninetyfive/sixtyseven/internal/tui/messages"
-	"github.com/ninetyfive/sixtyseven/internal/tui/styles"
-	"github.com/ninetyfive/sixtyseven/pkg/client"
+	"github.com/ninetyfive/p95/internal/tui/components"
+	"github.com/ninetyfive/p95/internal/tui/messages"
+	"github.com/ninetyfive/p95/internal/tui/styles"
+	"github.com/ninetyfive/p95/pkg/client"
 )
 
 // ViewMode represents the current view mode

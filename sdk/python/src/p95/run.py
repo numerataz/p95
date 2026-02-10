@@ -9,20 +9,20 @@ import threading
 import time
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from sixtyseven.config import SDKConfig, get_config
-from sixtyseven.exceptions import ValidationError
-from sixtyseven.utils import generate_run_name, get_git_info, get_system_info
+from p95.config import SDKConfig, get_config
+from p95.exceptions import ValidationError
+from p95.utils import generate_run_name, get_git_info, get_system_info
 
 if TYPE_CHECKING:
-    from sixtyseven.client import SixtySevenClient
-    from sixtyseven.metrics import MetricsBatcher
-    from sixtyseven.local import LocalWriter, LocalBatcher
-    from sixtyseven.server import ServerManager
+    from p95.client import P95Client
+    from p95.metrics import MetricsBatcher
+    from p95.local import LocalWriter, LocalBatcher
+    from p95.server import ServerManager
 
 
 class Run:
     """
-    Main class for tracking ML experiments with Sixtyseven.
+    Main class for tracking ML experiments with p95.
 
     A Run represents a single training session or experiment. It tracks:
     - Configuration/hyperparameters
@@ -31,8 +31,8 @@ class Run:
     - Git information
 
     Supports two modes:
-    - Local mode (default): Writes to local SQLite files, viewable with `sixtyseven --logdir`
-    - Remote mode: Sends to a Sixtyseven API server
+    - Local mode (default): Writes to local SQLite files, viewable with `pnf --logdir`
+    - Remote mode: Sends to a p95 API server
 
     Usage:
         # Context manager (recommended)
@@ -47,9 +47,9 @@ class Run:
         run.complete()  # or run.fail("error message")
 
     Environment variables:
-        SIXTYSEVEN_LOGDIR: Set to enable local mode with custom log directory
-        SIXTYSEVEN_URL: Set to enable remote mode with API server
-        SIXTYSEVEN_API_KEY: API key for remote mode authentication
+        P95_LOGDIR: Set to enable local mode with custom log directory
+        P95_URL: Set to enable remote mode with API server
+        P95_API_KEY: API key for remote mode authentication
     """
 
     def __init__(
@@ -87,13 +87,13 @@ class Run:
             flush_interval: Seconds between automatic flushes
             capture_git: Whether to capture git information
             capture_system: Whether to capture system information
-            start_server: Automatically start the sixtyseven viewer server and open the
+            start_server: Automatically start the p95 viewer server and open the
                 browser (local mode only). The server stops when the run ends.
 
         Raises:
             ValidationError: If project format is invalid (remote mode)
             AuthenticationError: If API key is invalid (remote mode)
-            ServerError: If start_server=True but the sixtyseven binary cannot be found
+            ServerError: If start_server=True but the pnf binary cannot be found
         """
         # Get global config
         global_config = get_config()
@@ -122,7 +122,7 @@ class Run:
         # Mode-specific initialization
         self._local_writer: Optional["LocalWriter"] = None
         self._local_batcher: Optional["LocalBatcher"] = None
-        self._remote_client: Optional["SixtySevenClient"] = None
+        self._remote_client: Optional["P95Client"] = None
         self._remote_batcher: Optional["MetricsBatcher"] = None
         self._server_manager: Optional["ServerManager"] = None
         self._start_server = start_server
@@ -151,7 +151,7 @@ class Run:
 
     def _init_local_mode(self) -> None:
         """Initialize local file-based storage."""
-        from sixtyseven.local import LocalWriter, LocalBatcher
+        from p95.local import LocalWriter, LocalBatcher
 
         self._local_writer = LocalWriter(
             logdir=self._config.logdir,
@@ -172,11 +172,11 @@ class Run:
         self._local_batcher.start()
 
         # Print local mode info
-        print(f"Sixtyseven: Logging to {self._local_writer.run_dir}")
+        print(f"p95: Logging to {self._local_writer.run_dir}")
 
         # Start the viewer server if requested
         if self._start_server:
-            from sixtyseven.server import ServerManager
+            from p95.server import ServerManager
 
             self._server_manager = ServerManager(
                 logdir=self._config.logdir,
@@ -189,13 +189,13 @@ class Run:
 
     def _init_remote_mode(self) -> None:
         """Initialize remote API client."""
-        from sixtyseven.client import SixtySevenClient
-        from sixtyseven.metrics import MetricsBatcher
+        from p95.client import P95Client
+        from p95.metrics import MetricsBatcher
 
         # Parse project for remote mode
         self._team_slug, self._app_slug = self._parse_project(self._project)
 
-        self._remote_client = SixtySevenClient(self._config, self._config.api_key)
+        self._remote_client = P95Client(self._config, self._config.api_key)
 
         # Create run on server
         self._run_id = self._remote_client.create_run(
@@ -407,7 +407,7 @@ class Run:
             # Mark run as canceled
             if not self._closed:
                 sig_name = "SIGINT" if signum == signal.SIGINT else "SIGTERM"
-                print(f"\nSixtyseven: Run canceled ({sig_name})")
+                print(f"\np95: Run canceled ({sig_name})")
                 self._finalize("canceled", error=f"Interrupted by {sig_name}")
 
             # Re-raise to exit
@@ -465,7 +465,7 @@ class Run:
             Active Run object
         """
         from pathlib import Path
-        from sixtyseven.local import LocalWriter, LocalBatcher
+        from p95.local import LocalWriter, LocalBatcher
 
         run_dir = Path(run_path).expanduser()
         if not run_dir.exists():
@@ -567,11 +567,11 @@ class Run:
         atexit.register(instance._cleanup)
         instance._setup_signal_handlers()
 
-        print(f"Sixtyseven: Resumed run at {run_dir}")
+        print(f"p95: Resumed run at {run_dir}")
 
         # Start server if requested
         if instance._start_server:
-            from sixtyseven.server import ServerManager
+            from p95.server import ServerManager
 
             instance._server_manager = ServerManager(
                 logdir=sdk_config.logdir,
@@ -603,8 +603,8 @@ class Run:
         Returns:
             Active Run object
         """
-        from sixtyseven.client import SixtySevenClient
-        from sixtyseven.metrics import MetricsBatcher
+        from p95.client import P95Client
+        from p95.metrics import MetricsBatcher
 
         # Get global config
         global_config = get_config()
@@ -622,7 +622,7 @@ class Run:
         )
 
         # Create client
-        client = SixtySevenClient(sdk_config, sdk_config.api_key)
+        client = P95Client(sdk_config, sdk_config.api_key)
 
         # Capture current git/system info
         git_info = None
@@ -713,7 +713,7 @@ def resume(
 
     Example:
         # Resume with new learning rate
-        resumed = sixtyseven.resume(
+        resumed = p95.resume(
             run.id,
             config={"lr": 0.0001},
             note="Reduced LR for fine-tuning"

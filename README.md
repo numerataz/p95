@@ -1,19 +1,17 @@
-# Sixtyseven Python SDK
+# p95 Python SDK
 
 Track ML experiments locally. No server setup required.
-
-Installing the Python package includes the binary for the TUI and the web server.
 
 ## Install
 
 ```bash
-pip install sixtyseven
+pip install p95
 ```
 
 ## Usage
 
 ```python
-from sixtyseven import Run
+from p95 import Run
 
 with Run(project="my-project", name="experiment-1") as run:
     run.log_config({"learning_rate": 0.001, "epochs": 10})
@@ -26,12 +24,10 @@ with Run(project="my-project", name="experiment-1") as run:
 ## View Results
 
 ```bash
-# Opens a dashboard at http://localhost:6767
-sixtyseven serve --logdir ~/.sixtyseven/logs
-
-# Opens the TUI
-sixtyseven tui --logdir ~/.sixtyseven/logs
+pnf --logdir ~/.p95/logs
 ```
+
+Opens a dashboard at http://localhost:6767
 
 ## API
 
@@ -43,9 +39,9 @@ run.add_tags(["baseline"])                                     # Add tags
 
 ## Environment Variables
 
-| Variable            | Description        | Default              |
-| ------------------- | ------------------ | -------------------- |
-| `SIXTYSEVEN_LOGDIR` | Where to save logs | `~/.sixtyseven/logs` |
+| Variable     | Description        | Default       |
+| ------------ | ------------------ | ------------- |
+| `P95_LOGDIR` | Where to save logs | `~/.p95/logs` |
 
 ## License
 

@@ -1,4 +1,4 @@
-"""Configuration management for the Sixtyseven SDK."""
+"""Configuration management for the p95 SDK."""
 
 import os
 from dataclasses import dataclass, field
@@ -14,13 +14,13 @@ def _default_logdir() -> str:
     system = platform.system()
 
     if system == "Darwin":
-        return str(home / "Library" / "Application Support" / "sixtyseven" / "logs")
+        return str(home / "Library" / "Application Support" / "p95" / "logs")
     elif system == "Windows":
         appdata = os.environ.get("LOCALAPPDATA", str(home / "AppData" / "Local"))
-        return str(Path(appdata) / "sixtyseven" / "logs")
+        return str(Path(appdata) / "p95" / "logs")
     else:  # Linux and others
         xdg_data = os.environ.get("XDG_DATA_HOME", str(home / ".local" / "share"))
-        return str(Path(xdg_data) / "sixtyseven" / "logs")
+        return str(Path(xdg_data) / "p95" / "logs")
 
 
 @dataclass
@@ -71,7 +71,7 @@ def configure(
 
     Args:
         mode: Operating mode ("local" for file-based, "remote" for API server)
-        base_url: Base URL for the Sixtyseven API server (remote mode)
+        base_url: Base URL for the p95 API server (remote mode)
         api_key: API key for authentication (remote mode)
         logdir: Directory for storing logs (local mode)
         batch_size: Number of metrics to batch before sending/writing
@@ -86,17 +86,17 @@ def configure(
         The updated configuration
 
     Example (local mode - default):
-        from sixtyseven import configure
+        from p95 import configure
 
         configure(logdir="./logs")  # Use local file storage
 
     Example (remote mode):
-        from sixtyseven import configure
+        from p95 import configure
 
         configure(
             mode="remote",
-            base_url="https://api.sixtyseven.ai",
-            api_key="ss67_xxxx",
+            base_url="https://api.p95.ai",
+            api_key="p95_xxxx",
         )
     """
     global _config
@@ -132,13 +132,13 @@ def _detect_mode() -> Literal["local", "remote"]:
     Auto-detect the operating mode based on environment variables.
 
     Priority:
-    1. SIXTYSEVEN_LOGDIR set -> local mode
-    2. SIXTYSEVEN_URL or SIXTYSEVEN_API_KEY set -> remote mode
+    1. P95_LOGDIR set -> local mode
+    2. P95_URL or P95_API_KEY set -> remote mode
     3. Default -> local mode (zero config experience)
     """
-    if os.environ.get("SIXTYSEVEN_LOGDIR"):
+    if os.environ.get("P95_LOGDIR"):
         return "local"
-    if os.environ.get("SIXTYSEVEN_URL") or os.environ.get("SIXTYSEVEN_API_KEY"):
+    if os.environ.get("P95_URL") or os.environ.get("P95_API_KEY"):
         return "remote"
     return "local"
 
@@ -151,11 +151,11 @@ def get_config() -> SDKConfig:
     _config.mode = _detect_mode()
 
     # Override with environment variables
-    if os.environ.get("SIXTYSEVEN_LOGDIR"):
-        _config.logdir = os.environ["SIXTYSEVEN_LOGDIR"]
-    if os.environ.get("SIXTYSEVEN_URL"):
-        _config.base_url = os.environ["SIXTYSEVEN_URL"]
-    if os.environ.get("SIXTYSEVEN_API_KEY"):
-        _config.api_key = os.environ["SIXTYSEVEN_API_KEY"]
+    if os.environ.get("P95_LOGDIR"):
+        _config.logdir = os.environ["P95_LOGDIR"]
+    if os.environ.get("P95_URL"):
+        _config.base_url = os.environ["P95_URL"]
+    if os.environ.get("P95_API_KEY"):
+        _config.api_key = os.environ["P95_API_KEY"]
 
     return _config

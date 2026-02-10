@@ -1,4 +1,4 @@
-"""Local file-based storage for Sixtyseven SDK."""
+"""Local file-based storage for p95 SDK."""
 
 import json
 import sqlite3
@@ -362,7 +362,7 @@ class LocalBatcher:
         self._flush_thread = threading.Thread(
             target=self._flush_loop,
             daemon=True,
-            name="sixtyseven-local-flusher",
+            name="p95-local-flusher",
         )
         self._flush_thread.start()
 

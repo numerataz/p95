@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Simple MNIST training example with Sixtyseven metric tracking.
+Simple MNIST training example with p95 metric tracking.
 
 Usage:
-    # First, start the sixtyseven server:
+    # First, start the p95 server:
     # cd deployments/docker && docker-compose up -d
 
     # Install dependencies:
@@ -11,7 +11,7 @@ Usage:
     # pip install -e sdk/python
 
     # Set your API key:
-    # export SIXTYSEVEN_API_KEY=ss67_your_key_here
+    # export P95_API_KEY=ss67_your_key_here
 
     # Run training:
     # python examples/train_mnist.py
@@ -24,12 +24,12 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-# Import sixtyseven SDK
-from sixtyseven import Run, configure
+# Import p95 SDK
+from p95 import Run, configure
 
-# Configure sixtyseven (optional - can also use env vars)
+# Configure p95 (optional - can also use env vars)
 configure(
-    base_url=os.environ.get("SIXTYSEVEN_URL", "http://localhost:8080"),
+    base_url=os.environ.get("P95_URL", "http://localhost:8080"),
 )
 
 
@@ -61,7 +61,7 @@ class SimpleNet(nn.Module):
 
 
 def train_epoch(model, device, train_loader, optimizer, epoch, run):
-    """Train for one epoch and log metrics to sixtyseven."""
+    """Train for one epoch and log metrics to p95."""
     model.train()
     total_loss = 0
     correct = 0
@@ -180,7 +180,7 @@ def main():
         model.parameters(), lr=config["learning_rate"], momentum=config["momentum"]
     )
 
-    # Start sixtyseven run
+    # Start p95 run
     # Replace with your actual team/app slugs
     with Run(
         project="my-team/mnist-experiments",

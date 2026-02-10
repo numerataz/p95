@@ -2,7 +2,7 @@ package messages
 
 import (
 	"github.com/google/uuid"
-	"github.com/ninetyfive/sixtyseven/pkg/client"
+	"github.com/ninetyfive/p95/pkg/client"
 )
 
 // Navigation messages

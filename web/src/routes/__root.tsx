@@ -10,7 +10,7 @@ export const Route = createRootRoute({
         <div className="container flex h-14 items-center px-6">
           <Link to="/projects" className="flex items-center gap-2 font-semibold">
             <Activity className="h-5 w-5" />
-            <span>Sixtyseven</span>
+            <span>p95</span>
           </Link>
         </div>
       </header>

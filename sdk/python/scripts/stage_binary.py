@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage the platform-specific sixtyseven binary into the Python package."""
+"""Stage the platform-specific pnf binary into the Python package."""
 
 from __future__ import annotations
 
@@ -32,11 +32,11 @@ def _platform_id() -> str | None:
 
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[3]
-    binary_path = os.environ.get("SIXTYSEVEN_BINARY_PATH")
+    binary_path = os.environ.get("P95_BINARY_PATH")
     if binary_path:
         binary = Path(binary_path)
     else:
-        binary = repo_root / "sixtyseven"
+        binary = repo_root / "pnf"
 
     if platform.system() == "Windows" and binary.suffix.lower() != ".exe":
         binary = binary.with_suffix(".exe")
@@ -50,7 +50,7 @@ def main() -> int:
         print("Unsupported platform for staging", file=sys.stderr)
         return 1
 
-    dest_dir = repo_root / "sdk" / "python" / "src" / "sixtyseven" / "bin" / platform_id
+    dest_dir = repo_root / "sdk" / "python" / "src" / "p95" / "bin" / platform_id
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     dest = dest_dir / binary.name

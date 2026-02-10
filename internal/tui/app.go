@@ -9,10 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/ninetyfive/sixtyseven/internal/tui/messages"
-	"github.com/ninetyfive/sixtyseven/internal/tui/styles"
-	"github.com/ninetyfive/sixtyseven/internal/tui/views"
-	"github.com/ninetyfive/sixtyseven/pkg/client"
+	"github.com/ninetyfive/p95/internal/tui/messages"
+	"github.com/ninetyfive/p95/internal/tui/styles"
+	"github.com/ninetyfive/p95/internal/tui/views"
+	"github.com/ninetyfive/p95/pkg/client"
 )
 
 // App is the main TUI application model
@@ -124,7 +124,7 @@ func (a App) View() string {
 
 // renderHeader renders the application header
 func (a App) renderHeader() string {
-	title := styles.Header.Render(" sixtyseven ")
+	title := styles.Header.Render(" p95 ")
 
 	header := lipgloss.JoinHorizontal(
 		lipgloss.Left,

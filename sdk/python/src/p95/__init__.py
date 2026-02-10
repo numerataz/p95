@@ -1,10 +1,10 @@
 """
-Sixtyseven - ML Experiment Tracking SDK
+p95 - ML Experiment Tracking SDK
 
-A Python SDK for tracking machine learning experiments with Sixtyseven.
+A Python SDK for tracking machine learning experiments with p95.
 
 Example usage:
-    from sixtyseven import Run
+    from p95 import Run
 
     with Run(project="my-team/image-classifier") as run:
         run.log_config({"learning_rate": 0.001})
@@ -14,7 +14,7 @@ Example usage:
             run.log_metrics({"loss": loss}, step=epoch)
 
 Resuming a run:
-    from sixtyseven import resume
+    from p95 import resume
 
     # Resume with new config
     resumed = resume(
@@ -28,16 +28,16 @@ Resuming a run:
             resumed.log_metrics({"loss": compute_loss()}, step=epoch)
 """
 
-from sixtyseven.config import configure
-from sixtyseven.exceptions import (
+from p95.config import configure
+from p95.exceptions import (
     APIError,
     AuthenticationError,
     ServerError,
-    SixtySevenError,
+    P95Error,
     ValidationError,
 )
-from sixtyseven.run import Run, resume
-from sixtyseven.server import start_server, stop_server
+from p95.run import Run, resume
+from p95.server import start_server, stop_server
 
 __version__ = "0.1.0"
 __all__ = [
@@ -46,7 +46,7 @@ __all__ = [
     "configure",
     "start_server",
     "stop_server",
-    "SixtySevenError",
+    "P95Error",
     "AuthenticationError",
     "APIError",
     "ValidationError",

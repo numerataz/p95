@@ -1,4 +1,4 @@
-"""HTTP client for communicating with the Sixtyseven API."""
+"""HTTP client for communicating with the p95 API."""
 
 import time
 from typing import Any, Dict, List, Optional
@@ -6,12 +6,12 @@ from urllib.parse import urljoin
 
 import requests
 
-from sixtyseven.config import SDKConfig
-from sixtyseven.exceptions import APIError, AuthenticationError
+from p95.config import SDKConfig
+from p95.exceptions import APIError, AuthenticationError
 
 
-class SixtySevenClient:
-    """HTTP client for the Sixtyseven API."""
+class P95Client:
+    """HTTP client for the p95 API."""
 
     def __init__(self, config: SDKConfig, api_key: Optional[str] = None):
         """
@@ -29,7 +29,7 @@ class SixtySevenClient:
             self.session.headers["Authorization"] = f"Bearer {self.api_key}"
 
         self.session.headers["Content-Type"] = "application/json"
-        self.session.headers["User-Agent"] = "sixtyseven-python/0.1.0"
+        self.session.headers["User-Agent"] = "p95-python/0.1.0"
 
     def _url(self, path: str) -> str:
         """Build full URL for an API endpoint."""

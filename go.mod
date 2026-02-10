@@ -1,4 +1,4 @@
-module github.com/ninetyfive/sixtyseven
+module github.com/ninetyfive/p95
 
 go 1.24.0
 
