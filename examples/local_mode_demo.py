@@ -32,9 +32,7 @@ def simulate_training():
     """Simulate a training loop with metrics."""
 
     print("Starting simulated training run...")
-    print(
-        f"Logs will be written to: {os.environ.get('P95_LOGDIR', '~/.pnf/logs')}"
-    )
+    print(f"Logs will be written to: {os.environ.get('P95_LOGDIR', '~/.pnf/logs')}")
     print()
 
     with Run(
