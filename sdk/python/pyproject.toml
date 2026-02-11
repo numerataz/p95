@@ -45,9 +45,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ninetyfive-gg/p95"
-Documentation = "https://github.com/ninetyfive-gg/p95"
-Repository = "https://github.com/ninetyfive-gg/p95"
+Homepage = "https://github.com/numerataz/p95"
+Documentation = "https://github.com/numerataz/p95"
+Repository = "https://github.com/numerataz/p95"
 
 [project.scripts]
 pnf = "p95.cli:main"
