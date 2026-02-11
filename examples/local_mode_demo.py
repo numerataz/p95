@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Demo script for Sixtyseven local mode.
+Demo script for p95 local mode.
 
 This demonstrates logging metrics to local files that can be viewed
-with the Sixtyseven local viewer.
+with the p95 local viewer.
 
 Usage:
     # Just run this script - the viewer starts automatically!
     python examples/local_mode_demo.py
 
     # Or start the viewer manually in a separate terminal:
-    sixtyseven --logdir ./logs
+    pnf --logdir ./logs
 """
 
 import os
@@ -23,18 +23,16 @@ import random
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../sdk/python/src"))
 
 # Set the log directory (optional - uses default if not set)
-os.environ["SIXTYSEVEN_LOGDIR"] = "./logs"
+os.environ["P95_LOGDIR"] = "./logs"
 
-from sixtyseven import Run
+from p95 import Run
 
 
 def simulate_training():
     """Simulate a training loop with metrics."""
 
     print("Starting simulated training run...")
-    print(
-        f"Logs will be written to: {os.environ.get('SIXTYSEVEN_LOGDIR', '~/.sixtyseven/logs')}"
-    )
+    print(f"Logs will be written to: {os.environ.get('P95_LOGDIR', '~/.pnf/logs')}")
     print()
 
     with Run(

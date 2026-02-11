@@ -21,12 +21,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/ninetyfive/sixtyseven/internal/domain"
-	"github.com/ninetyfive/sixtyseven/internal/server"
-	"github.com/ninetyfive/sixtyseven/internal/storage/file"
-	"github.com/ninetyfive/sixtyseven/internal/tui"
-	"github.com/ninetyfive/sixtyseven/pkg/client"
-	"github.com/ninetyfive/sixtyseven/web"
+	"github.com/ninetyfive/p95/internal/domain"
+	"github.com/ninetyfive/p95/internal/server"
+	"github.com/ninetyfive/p95/internal/storage/file"
+	"github.com/ninetyfive/p95/internal/tui"
+	"github.com/ninetyfive/p95/pkg/client"
+	"github.com/ninetyfive/p95/web"
 )
 
 func main() {
@@ -47,7 +47,7 @@ func main() {
 	case "tui":
 		tuiCmd(os.Args[2:])
 	case "version", "--version", "-v":
-		fmt.Println("sixtyseven v0.1.0")
+		fmt.Println("pnf v0.1.0")
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -63,10 +63,10 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`sixtyseven - ML experiment tracking
+	fmt.Println(`pnf - ML experiment tracking
 
 Usage:
-  sixtyseven <command> [options]
+  pnf <command> [options]
 
 Commands:
   tui     Interactive terminal UI with charts
@@ -75,14 +75,14 @@ Commands:
   serve   Start the web viewer
 
 Examples:
-  sixtyseven tui --logdir ./logs
-  sixtyseven ls --logdir ./logs
-  sixtyseven ls --logdir ./logs --project demo-project
-  sixtyseven show <run-id> --logdir ./logs
-  sixtyseven serve --logdir ./logs
+  pnf tui --logdir ./logs
+  pnf ls --logdir ./logs
+  pnf ls --logdir ./logs --project demo-project
+  pnf show <run-id> --logdir ./logs
+  pnf serve --logdir ./logs
 
 Options:
-  --logdir    Directory containing logs (default: ~/.sixtyseven/logs)
+  --logdir    Directory containing logs (default: ~/.p95/logs)
   --help      Show this help message`)
 }
 
@@ -204,7 +204,7 @@ func showCmd(args []string) {
 	remaining := fs.Args()
 	if len(remaining) == 0 {
 		fmt.Fprintf(os.Stderr, "Error: run ID required\n")
-		fmt.Fprintf(os.Stderr, "Usage: sixtyseven show <run-id> --logdir ./logs\n")
+		fmt.Fprintf(os.Stderr, "Usage: pnf show <run-id> --logdir ./logs\n")
 		os.Exit(1)
 	}
 	runID := remaining[0]
@@ -409,7 +409,7 @@ func serveCmd(args []string) {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Sixtyseven local viewer")
+		log.Printf("p95 local viewer")
 		log.Printf("  Logdir: %s", *logdir)
 		log.Printf("  URL:    http://%s", addr)
 		log.Println()
@@ -452,19 +452,19 @@ func defaultLogDir() string {
 
 	switch runtime.GOOS {
 	case "darwin":
-		return filepath.Join(home, "Library", "Application Support", "sixtyseven", "logs")
+		return filepath.Join(home, "Library", "Application Support", "p95", "logs")
 	case "windows":
 		appdata := os.Getenv("LOCALAPPDATA")
 		if appdata == "" {
 			appdata = filepath.Join(home, "AppData", "Local")
 		}
-		return filepath.Join(appdata, "sixtyseven", "logs")
+		return filepath.Join(appdata, "p95", "logs")
 	default: // Linux and others
 		xdgData := os.Getenv("XDG_DATA_HOME")
 		if xdgData == "" {
 			xdgData = filepath.Join(home, ".local", "share")
 		}
-		return filepath.Join(xdgData, "sixtyseven", "logs")
+		return filepath.Join(xdgData, "p95", "logs")
 	}
 }
 

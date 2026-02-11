@@ -17,9 +17,9 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	"github.com/ninetyfive/sixtyseven/internal/domain"
-	"github.com/ninetyfive/sixtyseven/internal/storage"
-	"github.com/ninetyfive/sixtyseven/internal/storage/file"
+	"github.com/ninetyfive/p95/internal/domain"
+	"github.com/ninetyfive/p95/internal/storage"
+	"github.com/ninetyfive/p95/internal/storage/file"
 )
 
 // Server represents the local HTTP server.
@@ -465,7 +465,7 @@ func (s *Server) statusPage(w http.ResponseWriter, r *http.Request) {
 	html := `<!DOCTYPE html>
 <html>
 <head>
-    <title>Sixtyseven Local Viewer</title>
+    <title>p95 Local Viewer</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
         h1 { color: #333; }
@@ -475,7 +475,7 @@ func (s *Server) statusPage(w http.ResponseWriter, r *http.Request) {
     </style>
 </head>
 <body>
-    <h1>Sixtyseven Local Viewer</h1>
+    <h1>p95 Local Viewer</h1>
     <p class="status">Server is running.</p>
     <p>The web UI is not embedded in this build. You can:</p>
     <ol>

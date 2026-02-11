@@ -8,8 +8,8 @@ GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 
 # Binary names
-API_BINARY=sixtyseven-api
-TUI_BINARY=sixtyseven
+API_BINARY=pnf-api
+TUI_BINARY=pnf
 
 # Directories
 CMD_API=./cmd/api
@@ -17,7 +17,7 @@ CMD_TUI=./cmd/tui
 BUILD_DIR=./build
 
 # Database
-DATABASE_URL?=postgres://sixtyseven:sixtyseven@localhost:5432/sixtyseven?sslmode=disable
+DATABASE_URL?=postgres://p95:p95@localhost:5432/p95?sslmode=disable
 
 all: build
 

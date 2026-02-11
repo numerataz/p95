@@ -1,4 +1,4 @@
--- Sixtyseven TimescaleDB Hypertables for Metrics
+-- p95 TimescaleDB Hypertables for Metrics
 -- Requires TimescaleDB extension
 
 -- Enable TimescaleDB

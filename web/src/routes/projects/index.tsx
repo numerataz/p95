@@ -50,7 +50,7 @@ function ProjectsPage() {
                 Start logging metrics from your Python code to see them here.
               </p>
               <pre className="mt-4 bg-muted p-4 rounded-md text-left max-w-md mx-auto text-sm overflow-x-auto">
-                {`from sixtyseven import Run
+                {`from p95 import Run
 
 with Run(project="my-project") as run:
     run.log_metrics({"loss": 0.5}, step=0)`}

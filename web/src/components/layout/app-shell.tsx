@@ -60,7 +60,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="h-14 flex items-center px-4 border-b">
           <Link to="/dashboard" className="flex items-center gap-2">
             <Activity className="h-6 w-6" />
-            {sidebarOpen && <span className="font-semibold">Sixtyseven</span>}
+            {sidebarOpen && <span className="font-semibold">p95</span>}
           </Link>
         </div>
 

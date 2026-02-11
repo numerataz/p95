@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Deque, Optional
 
 if TYPE_CHECKING:
-    from sixtyseven.client import SixtySevenClient
+    from p95.client import P95Client
 
 
 @dataclass
@@ -33,7 +33,7 @@ class MetricsBatcher:
 
     def __init__(
         self,
-        client: "SixtySevenClient",
+        client: "P95Client",
         run_id: str,
         batch_size: int = 100,
         flush_interval: float = 5.0,
@@ -62,7 +62,7 @@ class MetricsBatcher:
         self._flush_thread = threading.Thread(
             target=self._flush_loop,
             daemon=True,
-            name="sixtyseven-metrics-flusher",
+            name="p95-metrics-flusher",
         )
         self._flush_thread.start()
 

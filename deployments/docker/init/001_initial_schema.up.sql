@@ -1,4 +1,4 @@
--- Sixtyseven Initial Schema
+-- p95 Initial Schema
 -- PostgreSQL + TimescaleDB
 
 -- Enable UUID extension

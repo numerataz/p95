@@ -1,19 +1,19 @@
-"""Custom exceptions for the Sixtyseven SDK."""
+"""Custom exceptions for the p95 SDK."""
 
 
-class SixtySevenError(Exception):
-    """Base exception for Sixtyseven SDK errors."""
+class P95Error(Exception):
+    """Base exception for p95 SDK errors."""
 
     pass
 
 
-class AuthenticationError(SixtySevenError):
+class AuthenticationError(P95Error):
     """Raised when authentication fails."""
 
     pass
 
 
-class APIError(SixtySevenError):
+class APIError(P95Error):
     """Raised when an API request fails."""
 
     def __init__(self, message: str, status_code: int = None, response: dict = None):
@@ -22,19 +22,19 @@ class APIError(SixtySevenError):
         self.response = response
 
 
-class ValidationError(SixtySevenError):
+class ValidationError(P95Error):
     """Raised when validation fails."""
 
     pass
 
 
-class ConnectionError(SixtySevenError):
+class ConnectionError(P95Error):
     """Raised when connection to the server fails."""
 
     pass
 
 
-class ServerError(SixtySevenError):
+class ServerError(P95Error):
     """Raised when server management fails (e.g., binary not found, failed to start)."""
 
     pass

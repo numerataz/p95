@@ -6,7 +6,7 @@
 *.dll
 *.so
 *.dylib
-sixtyseven-api
+pnf-api
 
 # Test binary
 *.test
@@ -56,4 +56,4 @@ sdk/python/.ruff_cache/
 *.pyo
 
 # Config
-.sixtyseven/
+.p95/

@@ -28,9 +28,9 @@ import random
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../sdk/python/src"))
 
 # Set the log directory
-os.environ["SIXTYSEVEN_LOGDIR"] = "./logs"
+os.environ["P95_LOGDIR"] = "./logs"
 
-from sixtyseven import Run, resume
+from p95 import Run, resume
 
 
 def simulate_epoch(epoch: int, lr: float, base_loss: float) -> dict:
@@ -196,7 +196,7 @@ def main():
     print("Multi-Stage Training with Run Continuations")
     print("=" * 60)
     print()
-    print("This demo shows how to use sixtyseven.resume() to continue")
+    print("This demo shows how to use p95.resume() to continue")
     print("training with config changes. Each continuation creates a")
     print("visual marker on the charts showing where config changed.")
     print()

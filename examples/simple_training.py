@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Simple training simulation with Sixtyseven metric tracking.
+Simple training simulation with p95 metric tracking.
 
 This example doesn't require PyTorch - it simulates a training loop
-to demonstrate the sixtyseven SDK.
+to demonstrate the p95 SDK.
 
 Usage:
-    # First, start the sixtyseven server:
+    # First, start the p95 server:
     # cd deployments/docker && docker-compose up -d
 
     # Install the SDK:
     # pip install -e sdk/python
 
     # Set your API key:
-    # export SIXTYSEVEN_API_KEY=ss67_your_key_here
+    # export P95_API_KEY=ss67_your_key_here
 
     # Run:
     # python examples/simple_training.py
@@ -24,11 +24,11 @@ import random
 import time
 import os
 
-from sixtyseven import Run, configure
+from p95 import Run, configure
 
-# Configure sixtyseven
+# Configure p95
 configure(
-    base_url=os.environ.get("SIXTYSEVEN_URL", "http://localhost:8080"),
+    base_url=os.environ.get("P95_URL", "http://localhost:8080"),
 )
 
 
@@ -62,10 +62,10 @@ def main():
     }
 
     print("=" * 50)
-    print("Sixtyseven Training Example")
+    print("p95 Training Example")
     print("=" * 50)
 
-    # Start a run with sixtyseven
+    # Start a run with p95
     # NOTE: You need to create the team and app first via the API
     with Run(
         project="default/ninetyfive",  # Format: team-slug/app-slug

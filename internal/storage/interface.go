@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ninetyfive/sixtyseven/internal/domain"
+	"github.com/ninetyfive/p95/internal/domain"
 )
 
 // Project represents a project directory in local mode.

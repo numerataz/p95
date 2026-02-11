@@ -1,4 +1,4 @@
-"""Utility functions for the Sixtyseven SDK."""
+"""Utility functions for the p95 SDK."""
 
 import os
 import platform

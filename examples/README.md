@@ -1,6 +1,6 @@
-# Sixtyseven Examples
+# p95 Examples
 
-Example scripts demonstrating how to use the Sixtyseven SDK for ML experiment tracking.
+Example scripts demonstrating how to use the p95 SDK for ML experiment tracking.
 
 ## Quick Start
 
@@ -74,7 +74,7 @@ Opens http://localhost:6767
 ### Basic Usage
 
 ```python
-from sixtyseven import Run
+from p95 import Run
 
 with Run(project="my-project", name="experiment-1") as run:
     run.log_config({"lr": 0.001, "batch_size": 32})
@@ -84,14 +84,14 @@ with Run(project="my-project", name="experiment-1") as run:
         run.log_metrics({"loss": loss}, step=epoch)
 ```
 
-Runs are saved to `~/.sixtyseven/logs` by default.
+Runs are saved to `~/.p95/logs` by default.
 
 ### Auto-Start Viewer
 
 Use `start_server=True` to automatically launch the web viewer when your training script starts:
 
 ```python
-from sixtyseven import Run
+from p95 import Run
 
 with Run(
     project="my-project",
@@ -104,7 +104,7 @@ with Run(
 
 This will:
 
-- Start the sixtyseven server if not already running
+- Start the p95 server if not already running
 - Open your browser directly to the run's metrics page
 - Stream metrics in real-time as training progresses
 - If the viewer is already open, navigate to the new run automatically
