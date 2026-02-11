@@ -45,7 +45,7 @@ def main() -> int:
         print(f"Binary not found: {binary}", file=sys.stderr)
         return 1
 
-    platform_id = _platform_id()
+    platform_id = os.environ.get("P95_PLATFORM_ID") or _platform_id()
     if not platform_id:
         print("Unsupported platform for staging", file=sys.stderr)
         return 1
@@ -53,9 +53,10 @@ def main() -> int:
     dest_dir = repo_root / "sdk" / "python" / "src" / "p95" / "bin" / platform_id
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    dest = dest_dir / binary.name
+    binary_name = "pnf.exe" if platform_id.startswith("windows-") else "pnf"
+    dest = dest_dir / binary_name
     shutil.copy2(binary, dest)
-    if platform.system() != "Windows":
+    if not platform_id.startswith("windows-"):
         dest.chmod(0o755)
 
     print(f"Staged binary to {dest}")

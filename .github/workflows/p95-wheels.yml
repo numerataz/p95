@@ -35,12 +35,27 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Build web UI
         working-directory: web
         run: npm ci && npm run build
 
+      - name: Build Linux binaries
+        if: runner.os == 'Linux'
+        working-directory: .
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o pnf-linux-amd64 ./cmd/pnf
+          GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o pnf-linux-arm64 ./cmd/pnf
+
       - name: Build pnf binary
-        if: runner.os != 'Windows'
+        if: runner.os == 'macOS'
         working-directory: .
         env:
           CGO_ENABLED: "0"
@@ -53,7 +68,22 @@ jobs:
           CGO_ENABLED: "0"
         run: go build -trimpath -ldflags="-s -w" -o pnf.exe ./cmd/pnf
 
+      - name: Stage linux-amd64 binary into Python package
+        if: runner.os == 'Linux'
+        env:
+          P95_BINARY_PATH: ${{ github.workspace }}/pnf-linux-amd64
+          P95_PLATFORM_ID: linux-amd64
+        run: python sdk/python/scripts/stage_binary.py
+
+      - name: Stage linux-arm64 binary into Python package
+        if: runner.os == 'Linux'
+        env:
+          P95_BINARY_PATH: ${{ github.workspace }}/pnf-linux-arm64
+          P95_PLATFORM_ID: linux-arm64
+        run: python sdk/python/scripts/stage_binary.py
+
       - name: Stage binary into Python package
+        if: runner.os != 'Linux'
         run: python sdk/python/scripts/stage_binary.py
 
       - name: Install uv
@@ -71,7 +101,9 @@ jobs:
       - name: Build wheel (manylinux)
         if: runner.os == 'Linux'
         env:
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_MANYLINUX_X86_64: manylinux2014
+          CIBW_MANYLINUX_AARCH64: manylinux2014
         run: python -m cibuildwheel sdk/python --output-dir sdk/python/dist
 
       - name: Upload wheels
