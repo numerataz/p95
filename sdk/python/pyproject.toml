@@ -63,7 +63,7 @@ p95 = ["bin/**"]
 [tool.cibuildwheel]
 # Only build once per platform - the wheel is py3-none (Python version agnostic)
 # Build for both manylinux (glibc) and musllinux (Alpine)
-build = "cp312-manylinux_x86_64 cp312-musllinux_x86_64"
+build = "cp312-manylinux_x86_64 cp312-manylinux_aarch64 cp312-musllinux_x86_64 cp312-musllinux_aarch64"
 # Skip auditwheel - the Go binary is statically linked (CGO_ENABLED=0)
 # and doesn't need shared library bundling. The wheel is already tagged
 # appropriately in setup.py's get_tag().

@@ -45,7 +45,7 @@ def main() -> int:
         print(f"Binary not found: {binary}", file=sys.stderr)
         return 1
 
-    platform_id = _platform_id()
+    platform_id = os.environ.get("P95_PLATFORM_ID") or _platform_id()
     if not platform_id:
         print("Unsupported platform for staging", file=sys.stderr)
         return 1
