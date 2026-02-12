@@ -318,14 +318,14 @@ func (m MainModel) Update(msg tea.Msg) (MainModel, tea.Cmd) {
 			m.focus = PanelRuns
 		case "4":
 			m.focus = PanelGraph
-		case "up", "k":
+		case "up":
 			cmds = append(cmds, m.handleUp()...)
-		case "down", "j":
+		case "down":
 			cmds = append(cmds, m.handleDown()...)
-		case "left", "h":
-			cmds = append(cmds, m.handleLeft()...)
-		case "right", "l":
-			cmds = append(cmds, m.handleRight()...)
+		case "left":
+			// Reserved for within-panel navigation
+		case "right":
+			// Reserved for within-panel navigation
 		case "enter":
 			cmds = append(cmds, m.handleEnter()...)
 		case "r":
@@ -726,17 +726,13 @@ func (m *MainModel) handleDown() []tea.Cmd {
 	return cmds
 }
 
-// handleLeft handles left key press
+// handleLeft handles left key press (within-panel navigation)
 func (m *MainModel) handleLeft() []tea.Cmd {
-	// Cycle focus backward
-	m.focus = (m.focus + 3) % 4
 	return nil
 }
 
-// handleRight handles right key press
+// handleRight handles right key press (within-panel navigation)
 func (m *MainModel) handleRight() []tea.Cmd {
-	// Cycle focus forward
-	m.focus = (m.focus + 1) % 4
 	return nil
 }
 
