@@ -9,6 +9,7 @@ import (
 
 	"github.com/NimbleMarkets/ntcharts/canvas"
 	"github.com/NimbleMarkets/ntcharts/canvas/graph"
+	"github.com/NimbleMarkets/ntcharts/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/linechart"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -19,6 +20,7 @@ type RenderMode int
 const (
 	RenderModeBraillePoints RenderMode = iota
 	RenderModeLinechart
+	RenderModeGraphLines
 )
 
 const (
@@ -179,11 +181,14 @@ func (c *Chart) SetRenderMode(mode RenderMode) {
 	c.mode = mode
 }
 
-// ToggleRenderMode switches between braille points and linechart rendering.
+// ToggleRenderMode cycles between braille points, linechart, and graph lines rendering.
 func (c *Chart) ToggleRenderMode() {
-	if c.mode == RenderModeBraillePoints {
+	switch c.mode {
+	case RenderModeBraillePoints:
 		c.mode = RenderModeLinechart
-	} else {
+	case RenderModeLinechart:
+		c.mode = RenderModeGraphLines
+	default:
 		c.mode = RenderModeBraillePoints
 	}
 }
@@ -269,6 +274,9 @@ func (c *Chart) View() string {
 func (c *Chart) viewSingleSeries() string {
 	if c.mode == RenderModeLinechart {
 		return c.viewSingleSeriesLinechart()
+	}
+	if c.mode == RenderModeGraphLines {
+		return c.viewSingleSeriesGraphLines()
 	}
 	return c.viewSingleSeriesBraillePoints()
 }
@@ -589,10 +597,173 @@ func (c *Chart) viewSingleSeriesLinechart() string {
 	return sb.String()
 }
 
+func (c *Chart) viewSingleSeriesGraphLines() string {
+	if len(c.data) == 0 {
+		return styles.ChartTitle.Render(c.name) + "\n" +
+			styles.Label.Render("  No data")
+	}
+
+	// Find min/max for scaling
+	var minVal, maxVal float64
+	var minX, maxX float64
+	var minTime, maxTime int64
+	hasTimestamps := false
+
+	for i, p := range c.data {
+		val := p.Value
+		if c.yAxisScale == YAxisScaleLog && val > 0 {
+			val = applyLogScale(val)
+		}
+
+		if i == 0 {
+			minVal, maxVal = val, val
+			minX, maxX = float64(p.Step), float64(p.Step)
+			minTime, maxTime = p.Timestamp, p.Timestamp
+		} else {
+			if val < minVal {
+				minVal = val
+			}
+			if val > maxVal {
+				maxVal = val
+			}
+			if float64(p.Step) < minX {
+				minX = float64(p.Step)
+			}
+			if float64(p.Step) > maxX {
+				maxX = float64(p.Step)
+			}
+			if p.Timestamp < minTime {
+				minTime = p.Timestamp
+			}
+			if p.Timestamp > maxTime {
+				maxTime = p.Timestamp
+			}
+		}
+		if p.Timestamp > 0 {
+			hasTimestamps = true
+		}
+	}
+
+	// Determine X axis range based on mode
+	useRelativeTime := c.xAxisMode == XAxisModeRelativeTime && hasTimestamps
+	if useRelativeTime {
+		minX = 0
+		maxX = float64(maxTime-minTime) / 1000.0
+	}
+
+	// Add padding to range
+	valRange := maxVal - minVal
+	if valRange == 0 {
+		valRange = 1
+		minVal -= 0.5
+		maxVal += 0.5
+	}
+
+	xRange := maxX - minX
+	if xRange == 0 {
+		xRange = 1
+	}
+
+	// Calculate chart dimensions
+	chartHeight := c.height - 1
+	if chartHeight < 3 {
+		chartHeight = 3
+	}
+	chartWidth := c.width
+	if chartWidth < 10 {
+		chartWidth = 10
+	}
+
+	// Create ntcharts canvas
+	cv := canvas.New(chartWidth, chartHeight)
+	origin, graphWidth, graphHeight := graphSizeAndOrigin(
+		chartWidth,
+		chartHeight,
+		minVal,
+		maxVal,
+		defaultXAxisStep,
+		defaultYAxisStep,
+	)
+
+	c.drawAxesAndLabelsWithOptions(
+		&cv,
+		origin,
+		graphWidth,
+		graphHeight,
+		minX,
+		maxX,
+		minVal,
+		maxVal,
+		defaultXAxisStep,
+		defaultYAxisStep,
+		useRelativeTime,
+	)
+
+	// Draw connected graph lines for all points.
+	lineStyle := lipgloss.NewStyle().Foreground(c.color)
+	if len(c.data) == 1 {
+		pt := c.data[0]
+		x := float64(pt.Step)
+		if useRelativeTime {
+			x = float64(pt.Timestamp-minTime) / 1000.0
+		}
+		y := pt.Value
+		if c.yAxisScale == YAxisScaleLog && y > 0 {
+			y = applyLogScale(y)
+		}
+		p := scaleToGraphLinePoint(origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, x, y)
+		graph.DrawLinePoints(&cv, []canvas.Point{p}, runes.ArcLineStyle, lineStyle)
+	} else {
+		points := make([]canvas.Point, 0, len(c.data))
+		for i := 0; i < len(c.data); i++ {
+			pt := c.data[i]
+			x := float64(pt.Step)
+			if useRelativeTime {
+				x = float64(pt.Timestamp-minTime) / 1000.0
+			}
+			y := pt.Value
+			if c.yAxisScale == YAxisScaleLog && y > 0 {
+				y = applyLogScale(y)
+			}
+			points = append(points, scaleToGraphLinePoint(origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, x, y))
+		}
+		graph.DrawLinePoints(&cv, expandConnectedPoints(points), runes.ArcLineStyle, lineStyle)
+	}
+
+	// Draw continuation markers as vertical dashed lines
+	c.drawContinuationMarkers(&cv, origin, graphWidth, graphHeight, minX, maxX, useRelativeTime, minTime)
+
+	// Build output
+	var sb strings.Builder
+
+	// Title with latest value and mode indicators
+	latest := c.data[len(c.data)-1].Value
+	titleLine := styles.ChartTitle.Render(c.name) + " " +
+		styles.Value.Render(fmt.Sprintf("%.4f", latest))
+	if c.yAxisScale == YAxisScaleLog {
+		titleLine += " " + styles.Label.Render("[log]")
+	}
+	if useRelativeTime {
+		titleLine += " " + styles.Label.Render("[time]")
+	}
+	if len(c.continuations) > 0 {
+		titleLine += " " + styles.Label.Render(fmt.Sprintf("[%d cont]", len(c.continuations)))
+	}
+	sb.WriteString(titleLine + "\n")
+
+	// Chart
+	sb.WriteString(cv.View())
+
+	return sb.String()
+}
+
 // viewMultiSeries renders the chart with multiple data series using ntcharts
 func (c *Chart) viewMultiSeries() string {
 	if c.mode == RenderModeLinechart {
 		return c.viewMultiSeriesLinechart()
+	}
+	if c.mode == RenderModeGraphLines {
+		return c.viewMultiSeriesGraphLines()
 	}
 	return c.viewMultiSeriesBraillePoints()
 }
@@ -1013,6 +1184,191 @@ func (c *Chart) viewMultiSeriesLinechart() string {
 	return sb.String()
 }
 
+func (c *Chart) viewMultiSeriesGraphLines() string {
+	// Reorder series if there's a highlight
+	series := c.getOrderedSeries()
+
+	// Find global min/max across all series
+	var minVal, maxVal float64
+	var minX, maxX float64
+	var minTime, maxTime int64
+	hasData := false
+	hasTimestamps := false
+
+	for _, s := range series {
+		for _, p := range s.Points {
+			val := p.Value
+			if c.yAxisScale == YAxisScaleLog && val > 0 {
+				val = applyLogScale(val)
+			}
+
+			if !hasData {
+				minVal, maxVal = val, val
+				minX, maxX = float64(p.Step), float64(p.Step)
+				minTime, maxTime = p.Timestamp, p.Timestamp
+				hasData = true
+			} else {
+				if val < minVal {
+					minVal = val
+				}
+				if val > maxVal {
+					maxVal = val
+				}
+				if float64(p.Step) < minX {
+					minX = float64(p.Step)
+				}
+				if float64(p.Step) > maxX {
+					maxX = float64(p.Step)
+				}
+				if p.Timestamp < minTime {
+					minTime = p.Timestamp
+				}
+				if p.Timestamp > maxTime {
+					maxTime = p.Timestamp
+				}
+			}
+			if p.Timestamp > 0 {
+				hasTimestamps = true
+			}
+		}
+	}
+
+	if !hasData {
+		return styles.ChartTitle.Render(c.name) + "\n" +
+			styles.Label.Render("  No data")
+	}
+
+	// Determine X axis range based on mode
+	useRelativeTime := c.xAxisMode == XAxisModeRelativeTime && hasTimestamps
+	if useRelativeTime {
+		minX = 0
+		maxX = float64(maxTime-minTime) / 1000.0
+	}
+
+	// Add padding to range
+	valRange := maxVal - minVal
+	if valRange == 0 {
+		valRange = 1
+		minVal -= 0.5
+		maxVal += 0.5
+	}
+
+	xRange := maxX - minX
+	if xRange == 0 {
+		xRange = 1
+	}
+
+	// Calculate chart dimensions
+	// Reserve: 1 line for title, 1 line for legend
+	chartHeight := c.height - 2
+	if chartHeight < 3 {
+		chartHeight = 3
+	}
+	chartWidth := c.width
+	if chartWidth < 10 {
+		chartWidth = 10
+	}
+
+	// Create ntcharts canvas
+	cv := canvas.New(chartWidth, chartHeight)
+	origin, graphWidth, graphHeight := graphSizeAndOrigin(
+		chartWidth,
+		chartHeight,
+		minVal,
+		maxVal,
+		defaultXAxisStep,
+		defaultYAxisStep,
+	)
+
+	c.drawAxesAndLabelsWithOptions(
+		&cv,
+		origin,
+		graphWidth,
+		graphHeight,
+		minX,
+		maxX,
+		minVal,
+		maxVal,
+		defaultXAxisStep,
+		defaultYAxisStep,
+		useRelativeTime,
+	)
+
+	// Draw each series with graph line runes.
+	for _, s := range series {
+		if len(s.Points) == 0 {
+			continue
+		}
+
+		seriesStyle := lipgloss.NewStyle().Foreground(s.Color)
+		points := make([]canvas.Point, 0, len(s.Points))
+		for i := 0; i < len(s.Points); i++ {
+			pt := s.Points[i]
+			x := float64(pt.Step)
+			if useRelativeTime {
+				x = float64(pt.Timestamp-minTime) / 1000.0
+			}
+			y := pt.Value
+			if c.yAxisScale == YAxisScaleLog && y > 0 {
+				y = applyLogScale(y)
+			}
+			points = append(points, scaleToGraphLinePoint(origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, x, y))
+		}
+		graph.DrawLinePoints(&cv, expandConnectedPoints(points), runes.ArcLineStyle, seriesStyle)
+	}
+
+	// Draw continuation markers as vertical dashed lines
+	c.drawContinuationMarkers(&cv, origin, graphWidth, graphHeight, minX, maxX, useRelativeTime, minTime)
+
+	// Build output
+	var sb strings.Builder
+
+	// Title with mode indicators
+	titleLine := styles.ChartTitle.Render(c.name)
+	if c.yAxisScale == YAxisScaleLog {
+		titleLine += " " + styles.Label.Render("[log]")
+	}
+	if useRelativeTime {
+		titleLine += " " + styles.Label.Render("[time]")
+	}
+	if len(c.continuations) > 0 {
+		titleLine += " " + styles.Label.Render(fmt.Sprintf("[%d cont]", len(c.continuations)))
+	}
+	sb.WriteString(titleLine + "\n")
+
+	// Chart
+	sb.WriteString(cv.View())
+	sb.WriteString("\n")
+
+	// Legend with highlight indicator
+	var legendParts []string
+	legendWidth := 0
+	for i, s := range c.series {
+		label := s.Label
+		maxLabelLen := 15
+		if len(label) > maxLabelLen {
+			label = label[:maxLabelLen-3] + "..."
+		}
+		part := "━ " + label
+		if legendWidth+len(part)+2 > chartWidth {
+			break
+		}
+		lineStyle := lipgloss.NewStyle().Foreground(s.Color)
+		legendItem := lineStyle.Render("━") + " " + label
+		if i == c.highlightIndex {
+			legendItem = "[" + legendItem + "]"
+		}
+		legendParts = append(legendParts, legendItem)
+		legendWidth += len(part) + 2
+	}
+	if len(legendParts) > 0 {
+		legend := strings.Join(legendParts, "  ")
+		sb.WriteString(legend)
+	}
+
+	return sb.String()
+}
+
 // formatYLabel formats a Y-axis label to fit within 7 characters
 func formatYLabel(v float64) string {
 	yLabel := fmt.Sprintf("%7.2f", v)
@@ -1072,6 +1428,68 @@ func formatLogYLabel(logVal float64) string {
 	// Convert from log scale back to actual value for display
 	actualVal := inverseLogScale(logVal)
 	return formatYLabel(actualVal)
+}
+
+// expandConnectedPoints turns sparse points into a contiguous path suitable for DrawLinePoints.
+func expandConnectedPoints(points []canvas.Point) []canvas.Point {
+	if len(points) < 2 {
+		return points
+	}
+
+	expanded := make([]canvas.Point, 0, len(points))
+	expanded = append(expanded, points[0])
+
+	for i := 1; i < len(points); i++ {
+		a := points[i-1]
+		b := points[i]
+		segment := graph.GetLinePoints(a, b)
+		if len(segment) == 0 {
+			continue
+		}
+
+		// Keep interpolation direction aligned with the source segment.
+		if segment[0] != a {
+			for l, r := 0, len(segment)-1; l < r; l, r = l+1, r-1 {
+				segment[l], segment[r] = segment[r], segment[l]
+			}
+		}
+
+		// Skip first point to avoid duplicate joins between segments.
+		for j := 1; j < len(segment); j++ {
+			if segment[j] != expanded[len(expanded)-1] {
+				expanded = append(expanded, segment[j])
+			}
+		}
+	}
+
+	return expanded
+}
+
+// scaleToGraphLinePoint maps a data point into canvas coordinates for line-rune rendering.
+// It matches ntcharts line-style scaling, which uses full graph width/height.
+func scaleToGraphLinePoint(origin canvas.Point, graphWidth, graphHeight int, minX, maxX, minY, maxY, x, y float64) canvas.Point {
+	plotOrigin := origin
+	plotOrigin.X++
+	plotOrigin.Y--
+
+	var sf canvas.Float64Point
+	dx := maxX - minX
+	dy := maxY - minY
+	if dx > 0 {
+		w := graphWidth - 1
+		if w < 1 {
+			w = 1
+		}
+		sf.X = (x - minX) * float64(w) / dx
+	}
+	if dy > 0 {
+		h := graphHeight - 1
+		if h < 1 {
+			h = 1
+		}
+		sf.Y = (y - minY) * float64(h) / dy
+	}
+	return canvas.CanvasPointFromFloat64Point(plotOrigin, sf)
 }
 
 func graphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int) (canvas.Point, int, int) {
