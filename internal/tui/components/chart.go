@@ -83,6 +83,9 @@ type Chart struct {
 	xAxisMode      XAxisMode
 	yAxisScale     YAxisScale
 	highlightIndex int // Index of series to highlight (-1 = none)
+	cursorIndex    int // Selected X position in single-series data
+	plotStartX     int // Left edge of plotted graph area in rendered chart view
+	plotEndX       int // Right edge of plotted graph area in rendered chart view
 }
 
 // NewChart creates a new chart
@@ -97,6 +100,9 @@ func NewChart(name string) *Chart {
 		xAxisMode:      XAxisModeStep,
 		yAxisScale:     YAxisScaleLinear,
 		highlightIndex: -1,
+		cursorIndex:    -1,
+		plotStartX:     0,
+		plotEndX:       0,
 		data:           []DataPoint{},
 		series:         []DataSeries{},
 	}
@@ -114,7 +120,23 @@ func (c *Chart) SetSize(width, height int) {
 
 // SetData sets the chart data points (legacy single series)
 func (c *Chart) SetData(points []DataPoint) {
+	var cursorStep int64
+	hasCursor := c.cursorIndex >= 0 && c.cursorIndex < len(c.data)
+	if hasCursor {
+		cursorStep = c.data[c.cursorIndex].Step
+	}
+
 	c.data = points
+	if len(c.data) == 0 {
+		c.cursorIndex = -1
+		return
+	}
+
+	if hasCursor {
+		c.cursorIndex = findClosestStepIndex(c.data, cursorStep)
+		return
+	}
+	c.cursorIndex = len(c.data) - 1
 }
 
 // SetSeries sets multiple data series
@@ -158,6 +180,7 @@ func (c *Chart) GetContinuations() []ContinuationMarker {
 
 // AddPoint adds a data point to the chart (legacy single series)
 func (c *Chart) AddPoint(step int64, value float64) {
+	followTail := c.cursorIndex == len(c.data)-1 || c.cursorIndex < 0
 	c.data = append(c.data, DataPoint{Step: step, Value: value})
 
 	// Keep only last N points for display
@@ -166,7 +189,23 @@ func (c *Chart) AddPoint(step int64, value float64) {
 		maxPoints = 10
 	}
 	if len(c.data) > maxPoints {
-		c.data = c.data[len(c.data)-maxPoints:]
+		trimmed := len(c.data) - maxPoints
+		c.data = c.data[trimmed:]
+		c.cursorIndex -= trimmed
+	}
+
+	if len(c.data) == 0 {
+		c.cursorIndex = -1
+		return
+	}
+	if followTail {
+		c.cursorIndex = len(c.data) - 1
+	}
+	if c.cursorIndex < 0 {
+		c.cursorIndex = 0
+	}
+	if c.cursorIndex >= len(c.data) {
+		c.cursorIndex = len(c.data) - 1
 	}
 }
 
@@ -174,6 +213,7 @@ func (c *Chart) AddPoint(step int64, value float64) {
 func (c *Chart) Clear() {
 	c.data = []DataPoint{}
 	c.series = []DataSeries{}
+	c.cursorIndex = -1
 }
 
 // SetRenderMode sets how the chart is rendered.
@@ -259,6 +299,100 @@ func (c *Chart) CycleHighlight() int {
 // HasMultipleSeries returns true if there are multiple series to display
 func (c *Chart) HasMultipleSeries() bool {
 	return len(c.series) > 1
+}
+
+// PlotXBounds returns the last rendered X bounds for the plot area.
+func (c *Chart) PlotXBounds() (startX, endX int, ok bool) {
+	if c.plotEndX <= c.plotStartX {
+		return 0, 0, false
+	}
+	return c.plotStartX, c.plotEndX, true
+}
+
+// MoveCursorLeft moves the chart cursor left by one data point.
+func (c *Chart) MoveCursorLeft() bool {
+	if len(c.data) == 0 {
+		return false
+	}
+	if c.cursorIndex < 0 || c.cursorIndex >= len(c.data) {
+		c.cursorIndex = len(c.data) - 1
+		return true
+	}
+	if c.cursorIndex > 0 {
+		c.cursorIndex--
+		return true
+	}
+	return false
+}
+
+// MoveCursorRight moves the chart cursor right by one data point.
+func (c *Chart) MoveCursorRight() bool {
+	if len(c.data) == 0 {
+		return false
+	}
+	if c.cursorIndex < 0 {
+		c.cursorIndex = 0
+		return true
+	}
+	if c.cursorIndex >= len(c.data)-1 {
+		return false
+	}
+	c.cursorIndex++
+	return true
+}
+
+// SetCursorByRatio sets cursor based on normalized X position in [0,1].
+func (c *Chart) SetCursorByRatio(ratio float64) bool {
+	if len(c.data) == 0 {
+		return false
+	}
+	if ratio < 0 {
+		ratio = 0
+	}
+	if ratio > 1 {
+		ratio = 1
+	}
+
+	useRelativeTime := c.xAxisMode == XAxisModeRelativeTime
+	var minTime int64
+	if useRelativeTime {
+		minTime = c.data[0].Timestamp
+		for _, p := range c.data {
+			if p.Timestamp > 0 && (minTime == 0 || p.Timestamp < minTime) {
+				minTime = p.Timestamp
+			}
+		}
+	}
+
+	minX := c.pointX(c.data[0], minTime, useRelativeTime)
+	maxX := minX
+	for i := 1; i < len(c.data); i++ {
+		x := c.pointX(c.data[i], minTime, useRelativeTime)
+		if x < minX {
+			minX = x
+		}
+		if x > maxX {
+			maxX = x
+		}
+	}
+	xRange := maxX - minX
+	if xRange <= 0 {
+		c.cursorIndex = len(c.data) - 1
+		return true
+	}
+
+	targetX := minX + ratio*xRange
+	bestIdx := 0
+	bestDist := math.Abs(c.pointX(c.data[0], minTime, useRelativeTime) - targetX)
+	for i := 1; i < len(c.data); i++ {
+		dist := math.Abs(c.pointX(c.data[i], minTime, useRelativeTime) - targetX)
+		if dist < bestDist {
+			bestDist = dist
+			bestIdx = i
+		}
+	}
+	c.cursorIndex = bestIdx
+	return true
 }
 
 // View renders the chart
@@ -368,6 +502,8 @@ func (c *Chart) viewSingleSeriesBraillePoints() string {
 		defaultXAxisStep,
 		defaultYAxisStep,
 	)
+	c.plotStartX = origin.X + 1
+	c.plotEndX = origin.X + graphWidth
 	grid := graph.NewBrailleGrid(graphWidth, graphHeight,
 		minX, maxX,
 		minVal, maxVal,
@@ -410,6 +546,7 @@ func (c *Chart) viewSingleSeriesBraillePoints() string {
 		defaultYAxisStep,
 		useRelativeTime,
 	)
+	c.drawCursorOverlay(&cv, origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, useRelativeTime, minTime)
 
 	// Build output
 	var sb strings.Builder
@@ -540,6 +677,8 @@ func (c *Chart) viewSingleSeriesLinechart() string {
 		linechart.WithYLabelFormatter(yDedup.Format),
 		linechart.WithXLabelFormatter(xDedup.Format),
 	)
+	c.plotStartX = lc.Origin().X + 1
+	c.plotEndX = lc.Origin().X + lc.GraphWidth()
 
 	// Draw lines between consecutive points with style
 	lineStyle := lipgloss.NewStyle().Foreground(c.color)
@@ -572,6 +711,7 @@ func (c *Chart) viewSingleSeriesLinechart() string {
 
 	// Draw axes
 	lc.DrawXYAxisAndLabel()
+	c.drawCursorOverlay(&lc.Canvas, lc.Origin(), lc.GraphWidth(), lc.GraphHeight(), minX, maxX, minVal, maxVal, useRelativeTime, minTime)
 
 	// Build output
 	var sb strings.Builder
@@ -864,6 +1004,8 @@ func (c *Chart) viewMultiSeriesBraillePoints() string {
 		defaultXAxisStep,
 		defaultYAxisStep,
 	)
+	c.plotStartX = origin.X + 1
+	c.plotEndX = origin.X + graphWidth
 
 	// Draw each series with its color
 	for _, s := range series {
@@ -914,6 +1056,7 @@ func (c *Chart) viewMultiSeriesBraillePoints() string {
 		defaultYAxisStep,
 		useRelativeTime,
 	)
+	c.drawCursorOverlay(&cv, origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, useRelativeTime, minTime)
 
 	// Build output
 	var sb strings.Builder
@@ -1094,6 +1237,8 @@ func (c *Chart) viewMultiSeriesLinechart() string {
 		linechart.WithYLabelFormatter(yDedup.Format),
 		linechart.WithXLabelFormatter(xDedup.Format),
 	)
+	c.plotStartX = lc.Origin().X + 1
+	c.plotEndX = lc.Origin().X + lc.GraphWidth()
 
 	// Draw each series with its color
 	for _, s := range series {
@@ -1134,6 +1279,7 @@ func (c *Chart) viewMultiSeriesLinechart() string {
 
 	// Draw axes
 	lc.DrawXYAxisAndLabel()
+	c.drawCursorOverlay(&lc.Canvas, lc.Origin(), lc.GraphWidth(), lc.GraphHeight(), minX, maxX, minVal, maxVal, useRelativeTime, minTime)
 
 	// Build output
 	var sb strings.Builder
@@ -1492,6 +1638,47 @@ func scaleToGraphLinePoint(origin canvas.Point, graphWidth, graphHeight int, min
 	return canvas.CanvasPointFromFloat64Point(plotOrigin, sf)
 }
 
+func formatCursorValue(v float64) string {
+	absV := math.Abs(v)
+	switch {
+	case absV == 0:
+		return "0"
+	case absV >= 1000000:
+		return fmt.Sprintf("%.2fM", v/1000000)
+	case absV >= 1000:
+		return fmt.Sprintf("%.2fK", v/1000)
+	case absV >= 1:
+		return fmt.Sprintf("%.4f", v)
+	case absV >= 0.0001:
+		return fmt.Sprintf("%.6f", v)
+	default:
+		return fmt.Sprintf("%.2e", v)
+	}
+}
+
+func findClosestStepIndex(points []DataPoint, step int64) int {
+	if len(points) == 0 {
+		return -1
+	}
+	bestIdx := 0
+	bestDist := int64(math.Abs(float64(points[0].Step - step)))
+	for i := 1; i < len(points); i++ {
+		dist := int64(math.Abs(float64(points[i].Step - step)))
+		if dist < bestDist {
+			bestDist = dist
+			bestIdx = i
+		}
+	}
+	return bestIdx
+}
+
+func (c *Chart) pointX(p DataPoint, minTime int64, useRelativeTime bool) float64 {
+	if useRelativeTime && p.Timestamp > 0 {
+		return float64(p.Timestamp-minTime) / 1000.0
+	}
+	return float64(p.Step)
+}
+
 func graphSizeAndOrigin(w, h int, minY, maxY float64, xStep, yStep int) (canvas.Point, int, int) {
 	origin := canvas.Point{X: 0, Y: h - 1}
 	graphWidth := w
@@ -1727,6 +1914,98 @@ func (c *Chart) drawContinuationMarkers(cv *canvas.Model, origin canvas.Point, g
 			cv.SetStringWithStyle(canvas.Point{X: screenX, Y: origin.Y - graphHeight}, "↻", markerStyle)
 		}
 	}
+}
+
+func (c *Chart) drawCursorOverlay(cv *canvas.Model, origin canvas.Point, graphWidth, graphHeight int, minX, maxX, minVal, maxVal float64, useRelativeTime bool, minTime int64) {
+	if len(c.data) == 0 || graphWidth <= 0 || graphHeight <= 0 {
+		return
+	}
+	if c.cursorIndex < 0 || c.cursorIndex >= len(c.data) {
+		c.cursorIndex = len(c.data) - 1
+	}
+
+	pt := c.data[c.cursorIndex]
+	var xVal float64
+	if useRelativeTime {
+		xVal = float64(pt.Timestamp-minTime) / 1000.0
+	} else {
+		xVal = float64(pt.Step)
+	}
+	yVal := pt.Value
+	if c.yAxisScale == YAxisScaleLog && yVal > 0 {
+		yVal = applyLogScale(yVal)
+	}
+
+	xRange := maxX - minX
+	yRange := maxVal - minVal
+	if xRange <= 0 || yRange <= 0 {
+		return
+	}
+
+	screenX := origin.X + 1 + int(float64(graphWidth)*(xVal-minX)/xRange)
+	if screenX < origin.X+1 {
+		screenX = origin.X + 1
+	}
+	if screenX > origin.X+graphWidth {
+		screenX = origin.X + graphWidth
+	}
+
+	yRatio := (yVal - minVal) / yRange
+	if yRatio < 0 {
+		yRatio = 0
+	}
+	if yRatio > 1 {
+		yRatio = 1
+	}
+	plotY := int(math.Round(yRatio * float64(graphHeight-1)))
+	screenY := origin.Y - 1 - plotY
+	if screenY < origin.Y-graphHeight {
+		screenY = origin.Y - graphHeight
+	}
+	if screenY > origin.Y-1 {
+		screenY = origin.Y - 1
+	}
+
+	cursorLineStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+	cursorPointStyle := lipgloss.NewStyle().Foreground(styles.Primary).Bold(true)
+	cursorBoxStyle := lipgloss.NewStyle().Foreground(styles.Value.GetForeground())
+
+	// Vertical guide at selected X.
+	for y := origin.Y - graphHeight; y <= origin.Y-1; y++ {
+		if y%2 == 0 {
+			cv.SetStringWithStyle(canvas.Point{X: screenX, Y: y}, "┆", cursorLineStyle)
+		}
+	}
+	cv.SetStringWithStyle(canvas.Point{X: screenX, Y: screenY}, "●", cursorPointStyle)
+
+	label := " " + formatCursorValue(pt.Value) + " "
+	top := "┌" + strings.Repeat("─", len(label)) + "┐"
+	mid := "│" + label + "│"
+	bottom := "└" + strings.Repeat("─", len(label)) + "┘"
+
+	boxWidth := len(top)
+	boxX := screenX - boxWidth/2
+	if boxX < 0 {
+		boxX = 0
+	}
+	if boxX+boxWidth > cv.Width() {
+		boxX = cv.Width() - boxWidth
+	}
+
+	boxY := screenY - 3
+	if boxY < 0 {
+		boxY = screenY + 1
+	}
+	if boxY+2 >= cv.Height() {
+		boxY = cv.Height() - 3
+	}
+	if boxY < 0 {
+		return
+	}
+
+	cv.SetStringWithStyle(canvas.Point{X: boxX, Y: boxY}, top, cursorBoxStyle)
+	cv.SetStringWithStyle(canvas.Point{X: boxX, Y: boxY + 1}, mid, cursorBoxStyle)
+	cv.SetStringWithStyle(canvas.Point{X: boxX, Y: boxY + 2}, bottom, cursorBoxStyle)
 }
 
 // Name returns the chart name
