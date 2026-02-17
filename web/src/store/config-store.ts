@@ -31,7 +31,7 @@ const defaultConfig: AppConfig = {
   },
 };
 
-export const useConfigStore = create<ConfigState>((set, get) => ({
+export const useConfigStore = create<ConfigState>((set, _get) => ({
   config: defaultConfig,
   isLoading: false,
   error: null,
