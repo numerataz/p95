@@ -323,10 +323,6 @@ func (m MainModel) Update(msg tea.Msg) (MainModel, tea.Cmd) {
 			cmds = append(cmds, m.handleUp()...)
 		case "down":
 			cmds = append(cmds, m.handleDown()...)
-		case "left":
-			cmds = append(cmds, m.handleLeft()...)
-		case "right":
-			cmds = append(cmds, m.handleRight()...)
 		case "enter":
 			cmds = append(cmds, m.handleEnter()...)
 		case "r":
@@ -1119,9 +1115,6 @@ func (m MainModel) renderHelpBar() string {
 	help += styles.HelpKey.Render("t") + styles.HelpDesc.Render(" chart mode  ")
 	help += styles.HelpKey.Render("x") + styles.HelpDesc.Render(" x-axis  ")
 	help += styles.HelpKey.Render("y") + styles.HelpDesc.Render(" y-scale  ")
-	if m.focus == PanelGraph {
-		help += styles.HelpKey.Render("←/→") + styles.HelpDesc.Render(" x cursor  ")
-	}
 
 	// Comparison controls (show when in runs panel or graph panel)
 	if m.focus == PanelRuns || m.focus == PanelGraph {
