@@ -878,6 +878,7 @@ func (c *Chart) viewSingleSeriesGraphLines() string {
 
 	// Draw continuation markers as vertical dashed lines
 	c.drawContinuationMarkers(&cv, origin, graphWidth, graphHeight, minX, maxX, useRelativeTime, minTime)
+	c.drawCursorOverlay(&cv, origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, useRelativeTime, minTime, nil)
 
 	// Build output
 	var sb strings.Builder
@@ -1471,6 +1472,7 @@ func (c *Chart) viewMultiSeriesGraphLines() string {
 
 	// Draw continuation markers as vertical dashed lines
 	c.drawContinuationMarkers(&cv, origin, graphWidth, graphHeight, minX, maxX, useRelativeTime, minTime)
+	c.drawCursorOverlay(&cv, origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, useRelativeTime, minTime, series)
 
 	// Build output
 	var sb strings.Builder
@@ -1937,49 +1939,49 @@ func (c *Chart) drawCursorOverlay(cv *canvas.Model, origin canvas.Point, graphWi
 	// sub-cell position as the corresponding braille-drawn data point.
 	// Both render modes draw via braille coordinates internally.
 	bGrid := graph.NewBrailleGrid(graphWidth, graphHeight, minX, maxX, minVal, maxVal)
+	useDotMarker := c.mode == RenderModeGraphLines
 
 	pointToScreen := func(x, y float64) (int, int) {
-		gp := bGrid.GridPoint(canvas.Float64Point{X: x, Y: y})
-		screenX := origin.X + 1 + (gp.X / 2)
-		screenY := gp.Y / 4
+		var screenX, screenY int
+		if useDotMarker {
+			p := scaleToGraphLinePoint(origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, x, y)
+			screenX = p.X
+			screenY = p.Y
+		} else {
+			gp := bGrid.GridPoint(canvas.Float64Point{X: x, Y: y})
+			screenX = origin.X + 1 + (gp.X / 2)
+			screenY = gp.Y / 4
+		}
 		if screenX < origin.X+1 {
 			screenX = origin.X + 1
 		}
 		if screenX > origin.X+graphWidth {
 			screenX = origin.X + graphWidth
 		}
-		if screenY < 0 {
-			screenY = 0
+		graphTop := origin.Y - graphHeight
+		graphBottom := origin.Y - 1
+		if screenY < graphTop {
+			screenY = graphTop
 		}
-		if screenY > graphHeight-1 {
-			screenY = graphHeight - 1
+		if screenY > graphBottom {
+			screenY = graphBottom
 		}
 		return screenX, screenY
 	}
 	drawPoint := func(x, y float64, s lipgloss.Style) (int, int) {
-		gp := bGrid.GridPoint(canvas.Float64Point{X: x, Y: y})
-		screenX := origin.X + 1 + (gp.X / 2)
-		screenY := gp.Y / 4
-		if screenX < origin.X+1 {
-			screenX = origin.X + 1
-		}
-		if screenX > origin.X+graphWidth {
-			screenX = origin.X + graphWidth
-		}
-		if screenY < 0 {
-			screenY = 0
-		}
-		if screenY > graphHeight-1 {
-			screenY = graphHeight - 1
-		}
-		// Highlight the cursor cell with reverse video so it pops against
-		// the graph while preserving the braille dot pattern.
+		screenX, screenY := pointToScreen(x, y)
 		pt := canvas.Point{X: screenX, Y: screenY}
-		cell := cv.Cell(pt)
-		if cell.Rune != 0 {
-			cv.SetCell(pt, canvas.NewCellWithStyle(cell.Rune, s.Reverse(true)))
+		if useDotMarker {
+			cv.SetCell(pt, canvas.NewCellWithStyle('•', s))
 		} else {
-			cv.SetCell(pt, canvas.NewCellWithStyle(rune(0x28FF), s.Reverse(true)))
+			// Highlight the cursor cell with reverse video so it pops against
+			// the graph while preserving the braille dot pattern.
+			cell := cv.Cell(pt)
+			if cell.Rune != 0 {
+				cv.SetCell(pt, canvas.NewCellWithStyle(cell.Rune, s.Reverse(true)))
+			} else {
+				cv.SetCell(pt, canvas.NewCellWithStyle(rune(0x28FF), s.Reverse(true)))
+			}
 		}
 		return screenX, screenY
 	}
