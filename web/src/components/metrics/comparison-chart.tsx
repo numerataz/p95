@@ -235,7 +235,11 @@ export function ComparisonChart({
           domain={["auto", "auto"]}
         />
         <Tooltip
-          cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "4 4" }}
+          cursor={{
+            stroke: "hsl(var(--muted-foreground))",
+            strokeWidth: 1,
+            strokeDasharray: "4 4",
+          }}
           content={({ active, payload, label }) => {
             if (!active || !payload || !payload.length) return null;
             return (
@@ -274,7 +278,11 @@ export function ComparisonChart({
         />
         <Legend
           onClick={handleLegendClick}
-          wrapperStyle={{ cursor: "pointer", fontSize: "9px", lineHeight: "1.2" }}
+          wrapperStyle={{
+            cursor: "pointer",
+            fontSize: "9px",
+            lineHeight: "1.2",
+          }}
           iconSize={8}
           formatter={(value, entry) => {
             const runKey = runDataKeys.find(

@@ -84,7 +84,8 @@ function ProjectRunsPage() {
     setSelectedMetric(null);
   };
 
-  const allSelected = runs && runs.length > 0 && selectedRunIds.size === runs.length;
+  const allSelected =
+    runs && runs.length > 0 && selectedRunIds.size === runs.length;
 
   if (isLoading) {
     return (
@@ -177,7 +178,9 @@ function ProjectRunsPage() {
                   {runs.map((run) => (
                     <TableRow
                       key={run.id}
-                      className={selectedRunIds.has(run.id) ? "bg-muted/50" : ""}
+                      className={
+                        selectedRunIds.has(run.id) ? "bg-muted/50" : ""
+                      }
                     >
                       <TableCell className="py-2">
                         <div className="flex items-center justify-center">
@@ -208,7 +211,11 @@ function ProjectRunsPage() {
                           <TableCell>
                             <div className="flex gap-1 flex-wrap">
                               {run.tags?.slice(0, 3).map((tag) => (
-                                <Badge key={tag} variant="outline" className="text-xs">
+                                <Badge
+                                  key={tag}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
                                   {tag}
                                 </Badge>
                               ))}
@@ -248,7 +255,9 @@ function ProjectRunsPage() {
                     <div className="flex items-center gap-4">
                       {/* X-axis toggle */}
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">X:</span>
+                        <span className="text-xs text-muted-foreground">
+                          X:
+                        </span>
                         <Button
                           variant={xAxisMode === "step" ? "secondary" : "ghost"}
                           size="sm"
@@ -258,7 +267,9 @@ function ProjectRunsPage() {
                           Step
                         </Button>
                         <Button
-                          variant={xAxisMode === "relativeTime" ? "secondary" : "ghost"}
+                          variant={
+                            xAxisMode === "relativeTime" ? "secondary" : "ghost"
+                          }
                           size="sm"
                           className="h-6 px-2 text-xs"
                           onClick={() => setXAxisMode("relativeTime")}
@@ -268,9 +279,13 @@ function ProjectRunsPage() {
                       </div>
                       {/* Y-axis toggle */}
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">Y:</span>
+                        <span className="text-xs text-muted-foreground">
+                          Y:
+                        </span>
                         <Button
-                          variant={yAxisScale === "linear" ? "secondary" : "ghost"}
+                          variant={
+                            yAxisScale === "linear" ? "secondary" : "ghost"
+                          }
                           size="sm"
                           className="h-6 px-2 text-xs"
                           onClick={() => setYAxisScale("linear")}
@@ -301,7 +316,11 @@ function ProjectRunsPage() {
                     >
                       <TabsList className="flex-wrap h-auto gap-1 mb-4">
                         {metricNames.map((name) => (
-                          <TabsTrigger key={name} value={name} className="text-xs">
+                          <TabsTrigger
+                            key={name}
+                            value={name}
+                            className="text-xs"
+                          >
                             {name}
                           </TabsTrigger>
                         ))}
