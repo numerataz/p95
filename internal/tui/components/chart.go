@@ -84,6 +84,7 @@ type Chart struct {
 	yAxisScale     YAxisScale
 	highlightIndex int // Index of series to highlight (-1 = none)
 	cursorIndex    int // Selected X position in single-series data
+	cursorRatio    float64
 	plotStartX     int // Left edge of plotted graph area in rendered chart view
 	plotEndX       int // Right edge of plotted graph area in rendered chart view
 }
@@ -101,6 +102,7 @@ func NewChart(name string) *Chart {
 		yAxisScale:     YAxisScaleLinear,
 		highlightIndex: -1,
 		cursorIndex:    -1,
+		cursorRatio:    1,
 		plotStartX:     0,
 		plotEndX:       0,
 		data:           []DataPoint{},
@@ -343,7 +345,7 @@ func (c *Chart) MoveCursorRight() bool {
 
 // SetCursorByRatio sets cursor based on normalized X position in [0,1].
 func (c *Chart) SetCursorByRatio(ratio float64) bool {
-	if len(c.data) == 0 {
+	if len(c.data) == 0 && len(c.series) == 0 {
 		return false
 	}
 	if ratio < 0 {
@@ -352,8 +354,12 @@ func (c *Chart) SetCursorByRatio(ratio float64) bool {
 	if ratio > 1 {
 		ratio = 1
 	}
+	c.cursorRatio = ratio
 
 	useRelativeTime := c.xAxisMode == XAxisModeRelativeTime
+	if len(c.data) == 0 {
+		return true
+	}
 	var minTime int64
 	if useRelativeTime {
 		minTime = c.data[0].Timestamp
@@ -546,7 +552,7 @@ func (c *Chart) viewSingleSeriesBraillePoints() string {
 		defaultYAxisStep,
 		useRelativeTime,
 	)
-	c.drawCursorOverlay(&cv, origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, useRelativeTime, minTime)
+	c.drawCursorOverlay(&cv, origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, useRelativeTime, minTime, nil)
 
 	// Build output
 	var sb strings.Builder
@@ -711,7 +717,7 @@ func (c *Chart) viewSingleSeriesLinechart() string {
 
 	// Draw axes
 	lc.DrawXYAxisAndLabel()
-	c.drawCursorOverlay(&lc.Canvas, lc.Origin(), lc.GraphWidth(), lc.GraphHeight(), minX, maxX, minVal, maxVal, useRelativeTime, minTime)
+	c.drawCursorOverlay(&lc.Canvas, lc.Origin(), lc.GraphWidth(), lc.GraphHeight(), minX, maxX, minVal, maxVal, useRelativeTime, minTime, nil)
 
 	// Build output
 	var sb strings.Builder
@@ -1056,7 +1062,7 @@ func (c *Chart) viewMultiSeriesBraillePoints() string {
 		defaultYAxisStep,
 		useRelativeTime,
 	)
-	c.drawCursorOverlay(&cv, origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, useRelativeTime, minTime)
+	c.drawCursorOverlay(&cv, origin, graphWidth, graphHeight, minX, maxX, minVal, maxVal, useRelativeTime, minTime, series)
 
 	// Build output
 	var sb strings.Builder
@@ -1279,7 +1285,7 @@ func (c *Chart) viewMultiSeriesLinechart() string {
 
 	// Draw axes
 	lc.DrawXYAxisAndLabel()
-	c.drawCursorOverlay(&lc.Canvas, lc.Origin(), lc.GraphWidth(), lc.GraphHeight(), minX, maxX, minVal, maxVal, useRelativeTime, minTime)
+	c.drawCursorOverlay(&lc.Canvas, lc.Origin(), lc.GraphWidth(), lc.GraphHeight(), minX, maxX, minVal, maxVal, useRelativeTime, minTime, series)
 
 	// Build output
 	var sb strings.Builder
@@ -1916,24 +1922,9 @@ func (c *Chart) drawContinuationMarkers(cv *canvas.Model, origin canvas.Point, g
 	}
 }
 
-func (c *Chart) drawCursorOverlay(cv *canvas.Model, origin canvas.Point, graphWidth, graphHeight int, minX, maxX, minVal, maxVal float64, useRelativeTime bool, minTime int64) {
-	if len(c.data) == 0 || graphWidth <= 0 || graphHeight <= 0 {
+func (c *Chart) drawCursorOverlay(cv *canvas.Model, origin canvas.Point, graphWidth, graphHeight int, minX, maxX, minVal, maxVal float64, useRelativeTime bool, minTime int64, series []DataSeries) {
+	if (len(c.data) == 0 && len(series) == 0) || graphWidth <= 0 || graphHeight <= 0 {
 		return
-	}
-	if c.cursorIndex < 0 || c.cursorIndex >= len(c.data) {
-		c.cursorIndex = len(c.data) - 1
-	}
-
-	pt := c.data[c.cursorIndex]
-	var xVal float64
-	if useRelativeTime {
-		xVal = float64(pt.Timestamp-minTime) / 1000.0
-	} else {
-		xVal = float64(pt.Step)
-	}
-	yVal := pt.Value
-	if c.yAxisScale == YAxisScaleLog && yVal > 0 {
-		yVal = applyLogScale(yVal)
 	}
 
 	xRange := maxX - minX
@@ -1942,49 +1933,138 @@ func (c *Chart) drawCursorOverlay(cv *canvas.Model, origin canvas.Point, graphWi
 		return
 	}
 
-	screenX := origin.X + 1 + int(float64(graphWidth)*(xVal-minX)/xRange)
-	if screenX < origin.X+1 {
-		screenX = origin.X + 1
+	// Use a shared BrailleGrid so the cursor dot lands at the exact same
+	// sub-cell position as the corresponding braille-drawn data point.
+	// Both render modes draw via braille coordinates internally.
+	bGrid := graph.NewBrailleGrid(graphWidth, graphHeight, minX, maxX, minVal, maxVal)
+
+	pointToScreen := func(x, y float64) (int, int) {
+		gp := bGrid.GridPoint(canvas.Float64Point{X: x, Y: y})
+		screenX := origin.X + 1 + (gp.X / 2)
+		screenY := gp.Y / 4
+		if screenX < origin.X+1 {
+			screenX = origin.X + 1
+		}
+		if screenX > origin.X+graphWidth {
+			screenX = origin.X + graphWidth
+		}
+		if screenY < 0 {
+			screenY = 0
+		}
+		if screenY > graphHeight-1 {
+			screenY = graphHeight - 1
+		}
+		return screenX, screenY
 	}
-	if screenX > origin.X+graphWidth {
-		screenX = origin.X + graphWidth
+	drawPoint := func(x, y float64, s lipgloss.Style) (int, int) {
+		gp := bGrid.GridPoint(canvas.Float64Point{X: x, Y: y})
+		screenX := origin.X + 1 + (gp.X / 2)
+		screenY := gp.Y / 4
+		if screenX < origin.X+1 {
+			screenX = origin.X + 1
+		}
+		if screenX > origin.X+graphWidth {
+			screenX = origin.X + graphWidth
+		}
+		if screenY < 0 {
+			screenY = 0
+		}
+		if screenY > graphHeight-1 {
+			screenY = graphHeight - 1
+		}
+		// Highlight the cursor cell with reverse video so it pops against
+		// the graph while preserving the braille dot pattern.
+		pt := canvas.Point{X: screenX, Y: screenY}
+		cell := cv.Cell(pt)
+		if cell.Rune != 0 {
+			cv.SetCell(pt, canvas.NewCellWithStyle(cell.Rune, s.Reverse(true)))
+		} else {
+			cv.SetCell(pt, canvas.NewCellWithStyle(rune(0x28FF), s.Reverse(true)))
+		}
+		return screenX, screenY
 	}
 
-	yRatio := (yVal - minVal) / yRange
-	if yRatio < 0 {
-		yRatio = 0
-	}
-	if yRatio > 1 {
-		yRatio = 1
-	}
-	plotY := int(math.Round(yRatio * float64(graphHeight-1)))
-	screenY := origin.Y - 1 - plotY
-	if screenY < origin.Y-graphHeight {
-		screenY = origin.Y - graphHeight
-	}
-	if screenY > origin.Y-1 {
-		screenY = origin.Y - 1
-	}
+	targetX := minX + c.cursorRatio*xRange
+	anchorX, _ := pointToScreen(targetX, minVal)
+	anchorY := origin.Y - graphHeight/2
+	anchorSet := false
 
-	cursorLineStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-	cursorPointStyle := lipgloss.NewStyle().Foreground(styles.Primary).Bold(true)
 	cursorBoxStyle := lipgloss.NewStyle().Foreground(styles.Value.GetForeground())
 
-	// Vertical guide at selected X.
-	for y := origin.Y - graphHeight; y <= origin.Y-1; y++ {
-		if y%2 == 0 {
-			cv.SetStringWithStyle(canvas.Point{X: screenX, Y: y}, "┆", cursorLineStyle)
+	type cursorLabel struct {
+		color lipgloss.Color // series color for the dash prefix
+		value string         // formatted value text
+	}
+	var labels []cursorLabel
+	isMultiSeries := len(series) > 0
+
+	if isMultiSeries {
+		for _, s := range series {
+			if len(s.Points) == 0 {
+				continue
+			}
+			pt, ok := nearestPointAtX(s.Points, targetX, minTime, useRelativeTime)
+			if !ok {
+				continue
+			}
+			pointX := c.pointX(pt, minTime, useRelativeTime)
+			y := pt.Value
+			if c.yAxisScale == YAxisScaleLog && y > 0 {
+				y = applyLogScale(y)
+			}
+			seriesPointStyle := lipgloss.NewStyle().Foreground(s.Color).Bold(true)
+			px, py := drawPoint(pointX, y, seriesPointStyle)
+			if !anchorSet {
+				anchorX = px
+				anchorY = py
+				anchorSet = true
+			}
+
+			labels = append(labels, cursorLabel{color: s.Color, value: formatCursorValue(pt.Value)})
+		}
+	} else {
+		if c.cursorIndex < 0 || c.cursorIndex >= len(c.data) {
+			c.cursorIndex = len(c.data) - 1
+		}
+		pt := c.data[c.cursorIndex]
+		pointX := c.pointX(pt, minTime, useRelativeTime)
+		yVal := pt.Value
+		if c.yAxisScale == YAxisScaleLog && yVal > 0 {
+			yVal = applyLogScale(yVal)
+		}
+		singlePointStyle := lipgloss.NewStyle().Foreground(c.color).Bold(true)
+		anchorX, anchorY = drawPoint(pointX, yVal, singlePointStyle)
+		anchorSet = true
+		labels = append(labels, cursorLabel{value: formatCursorValue(pt.Value)})
+	}
+
+	if len(labels) == 0 {
+		return
+	}
+
+	// Calculate max display width per line.
+	// Multi-series lines have a "━ " prefix (2 display columns).
+	dashWidth := 0
+	if isMultiSeries {
+		dashWidth = 2
+	}
+	maxLineLen := 0
+	for _, l := range labels {
+		w := dashWidth + len(l.value)
+		if w > maxLineLen {
+			maxLineLen = w
 		}
 	}
-	cv.SetStringWithStyle(canvas.Point{X: screenX, Y: screenY}, "●", cursorPointStyle)
 
-	label := " " + formatCursorValue(pt.Value) + " "
-	top := "┌" + strings.Repeat("─", len(label)) + "┐"
-	mid := "│" + label + "│"
-	bottom := "└" + strings.Repeat("─", len(label)) + "┘"
+	top := "┌" + strings.Repeat("─", maxLineLen+2) + "┐"
+	bottom := "└" + strings.Repeat("─", maxLineLen+2) + "┘"
+	boxWidth := maxLineLen + 4 // "│ " + content + " │"
+	boxHeight := len(labels) + 2
 
-	boxWidth := len(top)
-	boxX := screenX - boxWidth/2
+	boxX := anchorX + 2
+	if boxX+boxWidth > cv.Width() {
+		boxX = anchorX - boxWidth - 2
+	}
 	if boxX < 0 {
 		boxX = 0
 	}
@@ -1992,20 +2072,62 @@ func (c *Chart) drawCursorOverlay(cv *canvas.Model, origin canvas.Point, graphWi
 		boxX = cv.Width() - boxWidth
 	}
 
-	boxY := screenY - 3
-	if boxY < 0 {
-		boxY = screenY + 1
+	boxY := anchorY - (boxHeight / 2)
+	graphTop := origin.Y - graphHeight
+	graphBottom := origin.Y - 1
+	if boxY < graphTop {
+		boxY = graphTop
 	}
-	if boxY+2 >= cv.Height() {
-		boxY = cv.Height() - 3
+	if boxY+boxHeight > graphBottom+1 {
+		boxY = graphBottom + 1 - boxHeight
 	}
 	if boxY < 0 {
-		return
+		boxY = 0
+	}
+	if boxY+boxHeight > cv.Height() {
+		boxY = cv.Height() - boxHeight
 	}
 
 	cv.SetStringWithStyle(canvas.Point{X: boxX, Y: boxY}, top, cursorBoxStyle)
-	cv.SetStringWithStyle(canvas.Point{X: boxX, Y: boxY + 1}, mid, cursorBoxStyle)
-	cv.SetStringWithStyle(canvas.Point{X: boxX, Y: boxY + 2}, bottom, cursorBoxStyle)
+	for i, l := range labels {
+		y := boxY + 1 + i
+		padding := strings.Repeat(" ", maxLineLen-dashWidth-len(l.value))
+		if isMultiSeries {
+			// "│ ━ value... │" with "━" in the series color
+			cv.SetStringWithStyle(canvas.Point{X: boxX, Y: y}, "│ ", cursorBoxStyle)
+			dashStyle := lipgloss.NewStyle().Foreground(l.color)
+			cv.SetStringWithStyle(canvas.Point{X: boxX + 2, Y: y}, "━", dashStyle)
+			cv.SetStringWithStyle(canvas.Point{X: boxX + 3, Y: y}, " "+l.value+padding+" │", cursorBoxStyle)
+		} else {
+			row := "│ " + l.value + padding + " │"
+			cv.SetStringWithStyle(canvas.Point{X: boxX, Y: y}, row, cursorBoxStyle)
+		}
+	}
+	cv.SetStringWithStyle(canvas.Point{X: boxX, Y: boxY + 1 + len(labels)}, bottom, cursorBoxStyle)
+}
+
+func nearestPointAtX(points []DataPoint, targetX float64, minTime int64, useRelativeTime bool) (DataPoint, bool) {
+	if len(points) == 0 {
+		return DataPoint{}, false
+	}
+	best := points[0]
+	bestX := float64(best.Step)
+	if useRelativeTime {
+		bestX = float64(best.Timestamp-minTime) / 1000.0
+	}
+	bestDist := math.Abs(bestX - targetX)
+	for i := 1; i < len(points); i++ {
+		x := float64(points[i].Step)
+		if useRelativeTime {
+			x = float64(points[i].Timestamp-minTime) / 1000.0
+		}
+		dist := math.Abs(x - targetX)
+		if dist < bestDist {
+			bestDist = dist
+			best = points[i]
+		}
+	}
+	return best, true
 }
 
 // Name returns the chart name

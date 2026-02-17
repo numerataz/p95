@@ -1026,11 +1026,16 @@ func (m *MainModel) handleMouseMove(msg tea.MouseMsg) {
 
 	name := m.metricNames[m.metricIdx]
 	chart, ok := m.charts[name]
-	if !ok || chart.PointCount() == 0 {
+	if !ok {
 		return
 	}
 
 	relativeX, _ := graphZone.Pos(msg)
+	// renderPanelBox adds 1-char border + 1-char horizontal padding.
+	contentX := relativeX - 2
+	if contentX < 0 {
+		contentX = 0
+	}
 	plotStartX, plotEndX, ok := chart.PlotXBounds()
 	if !ok {
 		return
@@ -1038,14 +1043,16 @@ func (m *MainModel) handleMouseMove(msg tea.MouseMsg) {
 	if plotEndX <= plotStartX {
 		return
 	}
-	if relativeX < plotStartX {
-		relativeX = plotStartX
+	if contentX < plotStartX {
+		contentX = plotStartX
 	}
-	if relativeX > plotEndX {
-		relativeX = plotEndX
+	if contentX > plotEndX {
+		contentX = plotEndX
 	}
-	ratio := float64(relativeX-plotStartX) / float64(plotEndX-plotStartX)
-	chart.SetCursorByRatio(ratio)
+	ratio := float64(contentX-plotStartX) / float64(plotEndX-plotStartX)
+	if !chart.SetCursorByRatio(ratio) {
+		return
+	}
 	m.focus = PanelGraph
 }
 
@@ -1374,7 +1381,7 @@ func (m MainModel) renderGraphPanel(width, height int) string {
 			if chart.PointCount() == 0 {
 				content += styles.Label.Render("No data points yet")
 			} else {
-				content += zone.Mark(fmt.Sprintf("%s%s", m.zoneID, zoneGraphArea), chart.View())
+				content += chart.View()
 			}
 		}
 	}
@@ -1384,7 +1391,8 @@ func (m MainModel) renderGraphPanel(width, height int) string {
 		borderColor = styles.Primary
 	}
 
-	return renderPanelBox(width, height, borderColor, "4 Graph", content)
+	panel := renderPanelBox(width, height, borderColor, "4 Graph", content)
+	return zone.Mark(fmt.Sprintf("%s%s", m.zoneID, zoneGraphArea), panel)
 }
 
 // Helper functions
