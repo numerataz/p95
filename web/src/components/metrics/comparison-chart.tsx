@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import { formatMetricValue, formatNumber } from "@/lib/utils";
 import type { XAxisMode, YAxisScale } from "./metric-chart";
@@ -71,13 +72,15 @@ export function ComparisonChart({
   yAxisScale = "linear",
 }: ComparisonChartProps) {
   const [highlightedRunId, setHighlightedRunId] = useState<string | null>(null);
+  const [hoverY, setHoverY] = useState<number | null>(null);
 
-  // Fetch metric data for all runs
+  // Fetch metric data for all runs (poll every 5s for live updates)
   const queries = useQueries({
     queries: runs.map((run) => ({
       queryKey: ["metrics", "series", run.id, metricName],
       queryFn: () => getMetricSeries(run.id, metricName, { maxPoints: 1000 }),
-      staleTime: 30000,
+      staleTime: 5000,
+      refetchInterval: 5000,
     })),
   });
 
@@ -206,7 +209,15 @@ export function ComparisonChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={chartData}>
+      <LineChart
+        data={chartData}
+        onMouseMove={(e) => {
+          if (e?.activePayload?.[0]?.value !== undefined) {
+            setHoverY(e.activePayload[0].value);
+          }
+        }}
+        onMouseLeave={() => setHoverY(null)}
+      >
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="xValue"
@@ -224,6 +235,7 @@ export function ComparisonChart({
           domain={["auto", "auto"]}
         />
         <Tooltip
+          cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "4 4" }}
           content={({ active, payload, label }) => {
             if (!active || !payload || !payload.length) return null;
             return (
@@ -262,7 +274,8 @@ export function ComparisonChart({
         />
         <Legend
           onClick={handleLegendClick}
-          wrapperStyle={{ cursor: "pointer" }}
+          wrapperStyle={{ cursor: "pointer", fontSize: "9px", lineHeight: "1.2" }}
+          iconSize={8}
           formatter={(value, entry) => {
             const runKey = runDataKeys.find(
               (r) => `run_${r.runId}` === entry.dataKey,
@@ -272,8 +285,9 @@ export function ComparisonChart({
             return (
               <span
                 style={{
-                  fontWeight: isHighlighted ? "bold" : "normal",
+                  fontWeight: isHighlighted ? "600" : "normal",
                   textDecoration: isHighlighted ? "underline" : "none",
+                  fontSize: "9px",
                 }}
               >
                 {runKey.runName}
@@ -281,6 +295,14 @@ export function ComparisonChart({
             );
           }}
         />
+        {hoverY !== null && (
+          <ReferenceLine
+            y={hoverY}
+            stroke="hsl(var(--muted-foreground))"
+            strokeWidth={1}
+            strokeDasharray="4 4"
+          />
+        )}
         {orderedRunDataKeys.map((runKey) => (
           <Line
             key={runKey.runId}
