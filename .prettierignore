@@ -1,0 +1,16 @@
+# Auto-generated files
+web/src/routeTree.gen.ts
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+bin/
+
+# Go files (not formatted by prettier)
+*.go
+go.mod
+go.sum
