@@ -2041,6 +2041,39 @@ func (c *Chart) drawCursorOverlay(cv *canvas.Model, origin canvas.Point, graphWi
 	if len(labels) == 0 {
 		return
 	}
+	if anchorSet {
+		crosshairStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
+		graphTop := origin.Y - graphHeight
+		graphBottom := origin.Y - 1
+		graphLeft := origin.X + 1
+		graphRight := origin.X + graphWidth
+		dashStride := 2
+
+		for y := graphTop; y <= graphBottom; y++ {
+			if y == anchorY {
+				continue
+			}
+			if absInt(y-anchorY)%dashStride != 0 {
+				continue
+			}
+			pt := canvas.Point{X: anchorX, Y: y}
+			if cell := cv.Cell(pt); cell.Rune == 0 {
+				cv.SetStringWithStyle(pt, "┆", crosshairStyle)
+			}
+		}
+		for x := graphLeft; x <= graphRight; x++ {
+			if x == anchorX {
+				continue
+			}
+			if absInt(x-anchorX)%dashStride != 0 {
+				continue
+			}
+			pt := canvas.Point{X: x, Y: anchorY}
+			if cell := cv.Cell(pt); cell.Rune == 0 {
+				cv.SetStringWithStyle(pt, "┄", crosshairStyle)
+			}
+		}
+	}
 
 	// Calculate max display width per line.
 	// Multi-series lines have a "━ " prefix (2 display columns).
@@ -2128,6 +2161,13 @@ func nearestPointAtX(points []DataPoint, targetX float64, minTime int64, useRela
 		}
 	}
 	return best, true
+}
+
+func absInt(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // Name returns the chart name
