@@ -830,6 +830,8 @@ func (c *Chart) viewSingleSeriesGraphLines() string {
 		defaultXAxisStep,
 		defaultYAxisStep,
 	)
+	c.plotStartX = origin.X + 1
+	c.plotEndX = origin.X + graphWidth
 
 	c.drawAxesAndLabelsWithOptions(
 		&cv,
@@ -1432,6 +1434,8 @@ func (c *Chart) viewMultiSeriesGraphLines() string {
 		defaultXAxisStep,
 		defaultYAxisStep,
 	)
+	c.plotStartX = origin.X + 1
+	c.plotEndX = origin.X + graphWidth
 
 	c.drawAxesAndLabelsWithOptions(
 		&cv,
