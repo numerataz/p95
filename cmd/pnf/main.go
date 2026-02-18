@@ -191,23 +191,36 @@ func listRuns(ctx context.Context, store *file.Storage, project string) {
 // ============================================
 
 func showCmd(args []string) {
+	// Extract positional args (non-flag args) before parsing,
+	// because Go's flag package stops at the first non-flag argument.
+	var flagArgs []string
+	var positional []string
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--logdir" && i+1 < len(args) {
+			flagArgs = append(flagArgs, args[i], args[i+1])
+			i++
+		} else if len(args[i]) > 0 && args[i][0] == '-' {
+			flagArgs = append(flagArgs, args[i])
+		} else {
+			positional = append(positional, args[i])
+		}
+	}
+
 	fs := flag.NewFlagSet("show", flag.ExitOnError)
 	logdir := fs.String("logdir", "", "Directory containing logs")
-	fs.Parse(args)
+	fs.Parse(flagArgs)
 
 	if *logdir == "" {
 		*logdir = defaultLogDir()
 	}
 	*logdir = expandPath(*logdir)
 
-	// Get run ID from remaining args
-	remaining := fs.Args()
-	if len(remaining) == 0 {
+	if len(positional) == 0 {
 		fmt.Fprintf(os.Stderr, "Error: run ID required\n")
 		fmt.Fprintf(os.Stderr, "Usage: pnf show <run-id> --logdir ./logs\n")
 		os.Exit(1)
 	}
-	runID := remaining[0]
+	runID := positional[0]
 
 	store, err := file.New(*logdir)
 	if err != nil {
@@ -221,9 +234,10 @@ func showCmd(args []string) {
 	// Get run info
 	run, err := store.GetRun(ctx, runID)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: run not found: %s\n", runID)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	runID = run.ID.String()
 
 	// Print run header
 	fmt.Printf("Run: %s\n", run.Name)

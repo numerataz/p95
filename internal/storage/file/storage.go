@@ -250,6 +250,7 @@ func (s *Storage) findRunByID(project, runID string) (*domain.Run, error) {
 		return nil, err
 	}
 
+	var matches []*domain.Run
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -260,9 +261,20 @@ func (s *Storage) findRunByID(project, runID string) (*domain.Run, error) {
 			continue
 		}
 
-		if run.ID.String() == runID {
+		idStr := run.ID.String()
+		if idStr == runID {
 			return run, nil
 		}
+		if strings.HasPrefix(idStr, runID) {
+			matches = append(matches, run)
+		}
+	}
+
+	if len(matches) == 1 {
+		return matches[0], nil
+	}
+	if len(matches) > 1 {
+		return nil, fmt.Errorf("ambiguous run ID prefix '%s' matches %d runs, please provide more characters", runID, len(matches))
 	}
 
 	return nil, fmt.Errorf("run not found: %s", runID)
