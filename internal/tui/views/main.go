@@ -22,6 +22,7 @@ const (
 	zoneProjectPrefix = "project-"
 	zoneRunPrefix     = "run-"
 	zoneMetricPrefix  = "metric-"
+	zoneGraphArea     = "graph-area"
 )
 
 // Panel represents which panel has focus
@@ -322,10 +323,6 @@ func (m MainModel) Update(msg tea.Msg) (MainModel, tea.Cmd) {
 			cmds = append(cmds, m.handleUp()...)
 		case "down":
 			cmds = append(cmds, m.handleDown()...)
-		case "left":
-			// Reserved for within-panel navigation
-		case "right":
-			// Reserved for within-panel navigation
 		case "enter":
 			cmds = append(cmds, m.handleEnter()...)
 		case "r":
@@ -353,10 +350,13 @@ func (m MainModel) Update(msg tea.Msg) (MainModel, tea.Cmd) {
 		}
 
 	case tea.MouseMsg:
-		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
+		if msg.Action == tea.MouseActionMotion {
+			m.handleMouseMove(msg)
 			break
 		}
-		cmds = append(cmds, m.handleMouseClick(msg)...)
+		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
+			cmds = append(cmds, m.handleMouseClick(msg)...)
+		}
 
 	case messages.TeamsLoadedMsg:
 		m.teams = msg.Teams
@@ -728,11 +728,23 @@ func (m *MainModel) handleDown() []tea.Cmd {
 
 // handleLeft handles left key press (within-panel navigation)
 func (m *MainModel) handleLeft() []tea.Cmd {
+	if m.focus == PanelGraph && len(m.metricNames) > 0 {
+		name := m.metricNames[m.metricIdx]
+		if chart, ok := m.charts[name]; ok {
+			chart.MoveCursorLeft()
+		}
+	}
 	return nil
 }
 
 // handleRight handles right key press (within-panel navigation)
 func (m *MainModel) handleRight() []tea.Cmd {
+	if m.focus == PanelGraph && len(m.metricNames) > 0 {
+		name := m.metricNames[m.metricIdx]
+		if chart, ok := m.charts[name]; ok {
+			chart.MoveCursorRight()
+		}
+	}
 	return nil
 }
 
@@ -997,6 +1009,47 @@ func (m *MainModel) handleMouseClick(msg tea.MouseMsg) []tea.Cmd {
 	}
 
 	return cmds
+}
+
+func (m *MainModel) handleMouseMove(msg tea.MouseMsg) {
+	if len(m.metricNames) == 0 {
+		return
+	}
+	graphZone := zone.Get(fmt.Sprintf("%s%s", m.zoneID, zoneGraphArea))
+	if graphZone == nil || !graphZone.InBounds(msg) {
+		return
+	}
+
+	name := m.metricNames[m.metricIdx]
+	chart, ok := m.charts[name]
+	if !ok {
+		return
+	}
+
+	relativeX, _ := graphZone.Pos(msg)
+	// renderPanelBox adds 1-char border + 1-char horizontal padding.
+	contentX := relativeX - 2
+	if contentX < 0 {
+		contentX = 0
+	}
+	plotStartX, plotEndX, ok := chart.PlotXBounds()
+	if !ok {
+		return
+	}
+	if plotEndX <= plotStartX {
+		return
+	}
+	if contentX < plotStartX {
+		contentX = plotStartX
+	}
+	if contentX > plotEndX {
+		contentX = plotEndX
+	}
+	ratio := float64(contentX-plotStartX) / float64(plotEndX-plotStartX)
+	if !chart.SetCursorByRatio(ratio) {
+		return
+	}
+	m.focus = PanelGraph
 }
 
 func (m *MainModel) adjustScroll(offset *int, idx int, visibleItems int) {
@@ -1331,7 +1384,8 @@ func (m MainModel) renderGraphPanel(width, height int) string {
 		borderColor = styles.Primary
 	}
 
-	return renderPanelBox(width, height, borderColor, "4 Graph", content)
+	panel := renderPanelBox(width, height, borderColor, "4 Graph", content)
+	return zone.Mark(fmt.Sprintf("%s%s", m.zoneID, zoneGraphArea), panel)
 }
 
 // Helper functions
