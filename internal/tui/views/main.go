@@ -1272,11 +1272,32 @@ func (m MainModel) renderRunsPanel(width, height int) string {
 
 			name := truncateStr(run.Name, width-11)
 
+			// Look up series color if this run is being compared
+			var seriesColor lipgloss.Color
+			isCompared := m.comparedRuns[run.ID]
+			if isCompared {
+				for j, id := range m.comparedRunOrder {
+					if id == run.ID {
+						seriesColor = styles.SeriesColors[j%len(styles.SeriesColors)]
+						break
+					}
+				}
+			}
+
 			var styledLine string
 			if i == m.runIdx && m.focus == PanelRuns {
-				// When selected, style the whole line uniformly (no nested styles)
+				// When selected and focused, style the whole line uniformly (no nested styles)
 				line := fmt.Sprintf("%s %s %s", prefix, statusChar, name)
 				styledLine = styles.SelectedItem.Render(padRight(line, width-4))
+			} else if isCompared {
+				// Compared run - color the name with its series color
+				nameStyle := lipgloss.NewStyle().Foreground(seriesColor)
+				prefixAndStatus := fmt.Sprintf("%s %s ", prefix, statusStyle.Render(statusChar))
+				if i == m.runIdx {
+					styledLine = styles.Value.Render(prefixAndStatus) + nameStyle.Render(name)
+				} else {
+					styledLine = styles.Label.Render(prefixAndStatus) + nameStyle.Render(name)
+				}
 			} else if i == m.runIdx {
 				// Selected but not focused - show status color
 				line := fmt.Sprintf("%s %s %s", prefix, statusStyle.Render(statusChar), name)
