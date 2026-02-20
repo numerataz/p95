@@ -36,10 +36,10 @@ var (
 			Foreground(Primary)
 
 	Label = lipgloss.NewStyle().
-		Foreground(Secondary)
+		Foreground(lipgloss.AdaptiveColor{Light: "0", Dark: "252"})
 
 	Value = lipgloss.NewStyle().
-		Foreground(White)
+		Foreground(lipgloss.AdaptiveColor{Light: "0", Dark: "255"})
 
 	StatusRunning = lipgloss.NewStyle().
 			Foreground(Success).
@@ -60,7 +60,7 @@ var (
 	// Box styles
 	Box = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Muted).
+		BorderForeground(lipgloss.AdaptiveColor{Light: "0", Dark: "245"}).
 		Padding(0, 1)
 
 	SelectedBox = lipgloss.NewStyle().
@@ -86,7 +86,7 @@ var (
 		Bold(true)
 
 	HelpDesc = lipgloss.NewStyle().
-			Foreground(Muted)
+			Foreground(lipgloss.AdaptiveColor{Light: "0", Dark: "245"})
 
 	// Table
 	TableHeader = lipgloss.NewStyle().
@@ -114,7 +114,7 @@ var (
 			Foreground(Primary)
 
 	ChartAxis = lipgloss.NewStyle().
-			Foreground(Muted)
+			Foreground(lipgloss.AdaptiveColor{Light: "0", Dark: "245"})
 
 	ChartTitle = lipgloss.NewStyle().
 			Bold(true).
