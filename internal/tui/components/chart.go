@@ -993,8 +993,8 @@ func (c *Chart) viewMultiSeriesBraillePoints() string {
 	}
 
 	// Calculate chart dimensions - ntcharts handles axes internally
-	// Reserve: 1 line for title, 1 line for legend
-	chartHeight := c.height - 2
+	// Reserve: 1 line for title
+	chartHeight := c.height - 1
 	if chartHeight < 3 {
 		chartHeight = 3
 	}
@@ -1085,33 +1085,6 @@ func (c *Chart) viewMultiSeriesBraillePoints() string {
 
 	// Chart
 	sb.WriteString(cv.View())
-	sb.WriteString("\n")
-
-	// Legend with highlight indicator
-	var legendParts []string
-	legendWidth := 0
-	for i, s := range c.series {
-		label := s.Label
-		maxLabelLen := 15
-		if len(label) > maxLabelLen {
-			label = label[:maxLabelLen-3] + "..."
-		}
-		part := "━ " + label
-		if legendWidth+len(part)+2 > chartWidth {
-			break
-		}
-		lineStyle := lipgloss.NewStyle().Foreground(s.Color)
-		legendItem := lineStyle.Render("━") + " " + label
-		if i == c.highlightIndex {
-			legendItem = "[" + legendItem + "]"
-		}
-		legendParts = append(legendParts, legendItem)
-		legendWidth += len(part) + 2
-	}
-	if len(legendParts) > 0 {
-		legend := strings.Join(legendParts, "  ")
-		sb.WriteString(legend)
-	}
 
 	return sb.String()
 }
@@ -1209,7 +1182,8 @@ func (c *Chart) viewMultiSeriesLinechart() string {
 	}
 
 	// Calculate chart dimensions
-	chartHeight := c.height - 2
+	// Reserve: 1 line for title
+	chartHeight := c.height - 1
 	if chartHeight < 3 {
 		chartHeight = 3
 	}
@@ -1308,33 +1282,6 @@ func (c *Chart) viewMultiSeriesLinechart() string {
 
 	// Chart
 	sb.WriteString(lc.View())
-	sb.WriteString("\n")
-
-	// Legend with highlight indicator
-	var legendParts []string
-	legendWidth := 0
-	for i, s := range c.series {
-		label := s.Label
-		maxLabelLen := 15
-		if len(label) > maxLabelLen {
-			label = label[:maxLabelLen-3] + "..."
-		}
-		part := "━ " + label
-		if legendWidth+len(part)+2 > chartWidth {
-			break
-		}
-		lineStyle := lipgloss.NewStyle().Foreground(s.Color)
-		legendItem := lineStyle.Render("━") + " " + label
-		if i == c.highlightIndex {
-			legendItem = "[" + legendItem + "]"
-		}
-		legendParts = append(legendParts, legendItem)
-		legendWidth += len(part) + 2
-	}
-	if len(legendParts) > 0 {
-		legend := strings.Join(legendParts, "  ")
-		sb.WriteString(legend)
-	}
 
 	return sb.String()
 }
@@ -1414,8 +1361,8 @@ func (c *Chart) viewMultiSeriesGraphLines() string {
 	}
 
 	// Calculate chart dimensions
-	// Reserve: 1 line for title, 1 line for legend
-	chartHeight := c.height - 2
+	// Reserve: 1 line for title
+	chartHeight := c.height - 1
 	if chartHeight < 3 {
 		chartHeight = 3
 	}
@@ -1496,33 +1443,6 @@ func (c *Chart) viewMultiSeriesGraphLines() string {
 
 	// Chart
 	sb.WriteString(cv.View())
-	sb.WriteString("\n")
-
-	// Legend with highlight indicator
-	var legendParts []string
-	legendWidth := 0
-	for i, s := range c.series {
-		label := s.Label
-		maxLabelLen := 15
-		if len(label) > maxLabelLen {
-			label = label[:maxLabelLen-3] + "..."
-		}
-		part := "━ " + label
-		if legendWidth+len(part)+2 > chartWidth {
-			break
-		}
-		lineStyle := lipgloss.NewStyle().Foreground(s.Color)
-		legendItem := lineStyle.Render("━") + " " + label
-		if i == c.highlightIndex {
-			legendItem = "[" + legendItem + "]"
-		}
-		legendParts = append(legendParts, legendItem)
-		legendWidth += len(part) + 2
-	}
-	if len(legendParts) > 0 {
-		legend := strings.Join(legendParts, "  ")
-		sb.WriteString(legend)
-	}
 
 	return sb.String()
 }
