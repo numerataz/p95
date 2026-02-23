@@ -400,9 +400,13 @@ func (m RunDetailModel) View() string {
 func (m RunDetailModel) renderListView() string {
 	var sb string
 
-	statusStyle := styles.StatusStyle(m.run.Status)
+	displayStatus := m.run.Status
+	if m.run.IsInactive() {
+		displayStatus = "inactive"
+	}
+	statusStyle := styles.StatusStyle(displayStatus)
 	sb += styles.Title.Render(m.run.Name) + "  "
-	sb += statusStyle.Render(m.run.Status) + "\n"
+	sb += statusStyle.Render(displayStatus) + "\n"
 
 	infoStyle := styles.Label
 	sb += infoStyle.Render(fmt.Sprintf("Started: %s", m.run.StartedAt.Format("Jan 02 15:04:05")))

@@ -82,6 +82,10 @@ type App struct {
 	RunCount    int       `json:"run_count"`
 }
 
+// inactiveThreshold is how long a "running" run must go without receiving
+// metric data before it is considered inactive (likely crashed).
+const inactiveThreshold = 5 * time.Minute
+
 // Run represents a run
 type Run struct {
 	ID              uuid.UUID          `json:"id"`
@@ -93,6 +97,23 @@ type Run struct {
 	EndedAt         *time.Time         `json:"ended_at"`
 	DurationSeconds *float64           `json:"duration_seconds"`
 	LatestMetrics   map[string]float64 `json:"latest_metrics"`
+	LastMetricTime  *time.Time         `json:"last_metric_time,omitempty"`
+}
+
+// IsInactive returns true if the run appears to have crashed: it is still
+// marked "running" but has not received any metric data for inactiveThreshold.
+func (r *Run) IsInactive() bool {
+	if r.Status != "running" {
+		return false
+	}
+	if time.Since(r.StartedAt) < inactiveThreshold {
+		return false
+	}
+	if r.LastMetricTime == nil {
+		// No metrics ever logged; treat as inactive after the threshold
+		return true
+	}
+	return time.Since(*r.LastMetricTime) > inactiveThreshold
 }
 
 // Metric represents a metric data point

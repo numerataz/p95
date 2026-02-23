@@ -54,8 +54,9 @@ type Run struct {
 	CreatedAt       time.Time      `json:"created_at"`
 
 	// Computed fields
-	LatestMetrics map[string]float64 `json:"latest_metrics,omitempty"`
-	MetricCount   int                `json:"metric_count,omitempty"`
+	LatestMetrics  map[string]float64 `json:"latest_metrics,omitempty"`
+	MetricCount    int                `json:"metric_count,omitempty"`
+	LastMetricTime *time.Time         `json:"last_metric_time,omitempty"`
 }
 
 // RunCreate contains fields for creating a new run

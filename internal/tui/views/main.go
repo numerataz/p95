@@ -1253,17 +1253,20 @@ func (m MainModel) renderRunsPanel(width, height int) string {
 			// Status indicator
 			statusChar := "○"
 			var statusStyle lipgloss.Style
-			switch run.Status {
-			case "running":
+			switch {
+			case run.Status == "running" && run.IsInactive():
+				statusChar = "○"
+				statusStyle = styles.StatusInactive
+			case run.Status == "running":
 				statusChar = "●"
 				statusStyle = styles.StatusRunning
-			case "completed":
+			case run.Status == "completed":
 				statusChar = "●"
 				statusStyle = styles.StatusCompleted
-			case "failed":
+			case run.Status == "failed":
 				statusChar = "●"
 				statusStyle = styles.StatusFailed
-			case "canceled", "aborted":
+			case run.Status == "canceled" || run.Status == "aborted":
 				statusChar = "●"
 				statusStyle = styles.StatusCanceled
 			default:
@@ -1327,7 +1330,11 @@ func (m MainModel) renderGraphPanel(width, height int) string {
 	if m.selectedRun != nil {
 		content += styles.Label.Render(m.selectedRun.Name)
 		if m.selectedRun.Status == "running" {
-			content += "  " + styles.StatusRunning.Render("● live")
+			if m.selectedRun.IsInactive() {
+				content += "  " + styles.StatusInactive.Render("○ inactive")
+			} else {
+				content += "  " + styles.StatusRunning.Render("● live")
+			}
 		}
 		if !m.lastUpdate.IsZero() {
 			content += "  " + lipgloss.NewStyle().Foreground(styles.Muted).Render(m.lastUpdate.Format("15:04:05"))
