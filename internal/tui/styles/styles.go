@@ -57,6 +57,9 @@ var (
 			Foreground(Warning).
 			Bold(true)
 
+	StatusInactive = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("178")) // Amber - stale/no-data running
+
 	// Box styles
 	Box = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -126,6 +129,8 @@ func StatusStyle(status string) lipgloss.Style {
 	switch status {
 	case "running":
 		return StatusRunning
+	case "inactive":
+		return StatusInactive
 	case "completed":
 		return StatusCompleted
 	case "failed":

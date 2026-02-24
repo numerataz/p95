@@ -344,6 +344,17 @@ func (s *Storage) loadRunMeta(project, runDir string) (*domain.Run, error) {
 	// Try to load latest metrics
 	run.LatestMetrics, _ = s.GetLatestMetrics(context.Background(), meta.ID)
 
+	// Try to load last metric time (used to detect inactive runs)
+	if run.Status == domain.RunStatusRunning {
+		if db, err := s.getRunDB(meta.ID); err == nil {
+			var lastTime float64
+			if err := db.QueryRowContext(context.Background(), "SELECT MAX(time) FROM metrics").Scan(&lastTime); err == nil && lastTime > 0 {
+				t := time.Unix(int64(lastTime), 0)
+				run.LastMetricTime = &t
+			}
+		}
+	}
+
 	return run, nil
 }
 

@@ -144,8 +144,12 @@ func (m RunsListModel) View() string {
 		started := run.StartedAt.Format("Jan 02 15:04")
 
 		// Status with color
-		statusStyle := styles.StatusStyle(run.Status)
-		status := statusStyle.Render(run.Status)
+		displayStatus := run.Status
+		if run.IsInactive() {
+			displayStatus = "inactive"
+		}
+		statusStyle := styles.StatusStyle(displayStatus)
+		status := statusStyle.Render(displayStatus)
 
 		line := fmt.Sprintf("%s%-24s %-10s %-12s %-20s",
 			prefix,
