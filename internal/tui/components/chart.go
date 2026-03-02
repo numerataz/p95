@@ -85,6 +85,7 @@ type Chart struct {
 	highlightIndex int // Index of series to highlight (-1 = none)
 	cursorIndex    int // Selected X position in single-series data
 	cursorRatio    float64
+	cursorVisible  bool // Whether the crosshair cursor is shown
 	plotStartX     int // Left edge of plotted graph area in rendered chart view
 	plotEndX       int // Right edge of plotted graph area in rendered chart view
 }
@@ -318,10 +319,12 @@ func (c *Chart) MoveCursorLeft() bool {
 	}
 	if c.cursorIndex < 0 || c.cursorIndex >= len(c.data) {
 		c.cursorIndex = len(c.data) - 1
+		c.cursorVisible = true
 		return true
 	}
 	if c.cursorIndex > 0 {
 		c.cursorIndex--
+		c.cursorVisible = true
 		return true
 	}
 	return false
@@ -334,13 +337,20 @@ func (c *Chart) MoveCursorRight() bool {
 	}
 	if c.cursorIndex < 0 {
 		c.cursorIndex = 0
+		c.cursorVisible = true
 		return true
 	}
 	if c.cursorIndex >= len(c.data)-1 {
 		return false
 	}
 	c.cursorIndex++
+	c.cursorVisible = true
 	return true
+}
+
+// HideCursor hides the crosshair cursor.
+func (c *Chart) HideCursor() {
+	c.cursorVisible = false
 }
 
 // SetCursorByRatio sets cursor based on normalized X position in [0,1].
@@ -398,6 +408,7 @@ func (c *Chart) SetCursorByRatio(ratio float64) bool {
 		}
 	}
 	c.cursorIndex = bestIdx
+	c.cursorVisible = true
 	return true
 }
 
@@ -1849,6 +1860,9 @@ func (c *Chart) drawContinuationMarkers(cv *canvas.Model, origin canvas.Point, g
 }
 
 func (c *Chart) drawCursorOverlay(cv *canvas.Model, origin canvas.Point, graphWidth, graphHeight int, minX, maxX, minVal, maxVal float64, useRelativeTime bool, minTime int64, series []DataSeries) {
+	if !c.cursorVisible {
+		return
+	}
 	if (len(c.data) == 0 && len(series) == 0) || graphWidth <= 0 || graphHeight <= 0 {
 		return
 	}
