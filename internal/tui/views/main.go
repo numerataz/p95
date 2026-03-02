@@ -1017,6 +1017,10 @@ func (m *MainModel) handleMouseMove(msg tea.MouseMsg) {
 	}
 	graphZone := zone.Get(fmt.Sprintf("%s%s", m.zoneID, zoneGraphArea))
 	if graphZone == nil || !graphZone.InBounds(msg) {
+		name := m.metricNames[m.metricIdx]
+		if chart, ok := m.charts[name]; ok {
+			chart.HideCursor()
+		}
 		return
 	}
 
