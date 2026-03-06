@@ -119,6 +119,12 @@ class Run:
         self._tags = tags or []
         self._initial_config = config
 
+        # Check for sweep context - auto-link to sweep if running inside agent
+        self._sweep_id: Optional[str] = None
+        self._sweep_params: Optional[Dict[str, Any]] = None
+        self._sweep_context = None
+        self._check_sweep_context()
+
         # Mode-specific initialization
         self._local_writer: Optional["LocalWriter"] = None
         self._local_batcher: Optional["LocalBatcher"] = None
@@ -215,6 +221,38 @@ class Run:
             flush_interval=self._config.flush_interval,
         )
         self._remote_batcher.start()
+
+    def _check_sweep_context(self) -> None:
+        """Check if running inside a sweep agent and auto-link."""
+        try:
+            from p95.sweep import get_current_sweep_context
+        except ImportError:
+            return
+
+        ctx = get_current_sweep_context()
+        if ctx is None:
+            return
+
+        # Auto-link to sweep
+        self._sweep_id = ctx.sweep_id
+        self._sweep_params = ctx.params
+        self._sweep_context = ctx
+
+        # Merge sweep params into config
+        if ctx.params:
+            if self._initial_config is None:
+                self._initial_config = {}
+            # Sweep params take precedence
+            merged = {**self._initial_config, **ctx.params}
+            # Also merge any static sweep config
+            if ctx.sweep_data and ctx.sweep_data.get("config"):
+                merged = {**ctx.sweep_data["config"], **merged}
+            self._initial_config = merged
+
+        # Register this run with the context so agent can track it
+        ctx._run = self
+
+        print(f"p95: Run auto-linked to sweep {ctx.sweep_id[:8]}...")
 
     @property
     def id(self) -> str:

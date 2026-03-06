@@ -38,6 +38,7 @@ from p95.exceptions import (
 )
 from p95.run import Run, resume
 from p95.server import start_server, stop_server
+from p95.sweep import sweep, agent, should_prune, SweepConfig, ParameterSpec
 
 __version__ = "0.1.0"
 __all__ = [
@@ -46,6 +47,11 @@ __all__ = [
     "configure",
     "start_server",
     "stop_server",
+    "sweep",
+    "agent",
+    "should_prune",
+    "SweepConfig",
+    "ParameterSpec",
     "P95Error",
     "AuthenticationError",
     "APIError",
