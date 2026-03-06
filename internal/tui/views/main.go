@@ -319,6 +319,10 @@ func (m MainModel) Update(msg tea.Msg) (MainModel, tea.Cmd) {
 			m.focus = PanelRuns
 		case "4":
 			m.focus = PanelGraph
+		case "left":
+			cmds = append(cmds, m.handleLeft()...)
+		case "right":
+			cmds = append(cmds, m.handleRight()...)
 		case "up":
 			cmds = append(cmds, m.handleUp()...)
 		case "down":
@@ -726,25 +730,15 @@ func (m *MainModel) handleDown() []tea.Cmd {
 	return cmds
 }
 
-// handleLeft handles left key press (within-panel navigation)
+// handleLeft handles left key press (navigate to previous panel)
 func (m *MainModel) handleLeft() []tea.Cmd {
-	if m.focus == PanelGraph && len(m.metricNames) > 0 {
-		name := m.metricNames[m.metricIdx]
-		if chart, ok := m.charts[name]; ok {
-			chart.MoveCursorLeft()
-		}
-	}
+	m.focus = (m.focus + 3) % 4
 	return nil
 }
 
-// handleRight handles right key press (within-panel navigation)
+// handleRight handles right key press (navigate to next panel)
 func (m *MainModel) handleRight() []tea.Cmd {
-	if m.focus == PanelGraph && len(m.metricNames) > 0 {
-		name := m.metricNames[m.metricIdx]
-		if chart, ok := m.charts[name]; ok {
-			chart.MoveCursorRight()
-		}
-	}
+	m.focus = (m.focus + 1) % 4
 	return nil
 }
 
