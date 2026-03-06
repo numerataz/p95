@@ -39,26 +39,27 @@ import math
 import os
 import random
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 
-from p95.config import get_config
 from p95.client import P95Client
+from p95.config import get_config
 
 if TYPE_CHECKING:
     from p95.run import Run
 
 # Thread-local context for current sweep
-_current_sweep_context: contextvars.ContextVar[Optional["SweepContext"]] = contextvars.ContextVar(
-    "current_sweep_context", default=None
+_current_sweep_context: contextvars.ContextVar[Optional["SweepContext"]] = (
+    contextvars.ContextVar("current_sweep_context", default=None)
 )
 
 
 @dataclass
 class SweepContext:
     """Context for the currently running sweep agent."""
+
     sweep_id: str
     params: Dict[str, Any]
     run_index: int
@@ -118,9 +119,7 @@ class SweepConfig:
             "method": self.method,
             "metric_name": self.metric,
             "metric_goal": self.goal,
-            "search_space": {
-                "parameters": [p.to_dict() for p in self.parameters]
-            },
+            "search_space": {"parameters": [p.to_dict() for p in self.parameters]},
         }
         if self.config:
             result["config"] = self.config
@@ -189,7 +188,7 @@ def should_prune(
                 break
     """
     # Check if this run is part of a sweep
-    if not hasattr(run, '_sweep_id') or not run._sweep_id:
+    if not hasattr(run, "_sweep_id") or not run._sweep_id:
         return False
 
     sweep_id = run._sweep_id
@@ -213,7 +212,7 @@ def should_prune(
             return False
 
     # Local sweep
-    if not hasattr(run, '_sweep_data') or not hasattr(run, '_sweep_dir'):
+    if not hasattr(run, "_sweep_data") or not hasattr(run, "_sweep_dir"):
         return False
 
     sweep_data = run._sweep_data
@@ -234,7 +233,11 @@ def should_prune(
         return False
 
     # Get median at this step
-    run_id = run._local_writer.run_id if hasattr(run, '_local_writer') and run._local_writer else None
+    run_id = (
+        run._local_writer.run_id
+        if hasattr(run, "_local_writer") and run._local_writer
+        else None
+    )
     median = _get_median_at_step_local(
         sweep_dir,
         run._project,
@@ -403,6 +406,7 @@ def _run_remote_agent(
 
 class _PrunedException(Exception):
     """Raised when a run should be pruned."""
+
     pass
 
 
@@ -486,12 +490,12 @@ def _run_local_agent(
 
             # After training, find the run that was created and update sweep best
             # The Run class will have registered itself in the context
-            if hasattr(ctx, '_run') and ctx._run:
+            if hasattr(ctx, "_run") and ctx._run:
                 _update_local_sweep_best(sweep_file, ctx._run, sweep_data)
 
         except _PrunedException as e:
             print(f"Run pruned: {e}")
-            if hasattr(ctx, '_run') and ctx._run:
+            if hasattr(ctx, "_run") and ctx._run:
                 _update_local_sweep_best(sweep_file, ctx._run, sweep_data)
         except Exception as e:
             print(f"Run failed: {e}")
@@ -602,7 +606,7 @@ def _update_local_sweep_best(
     goal = sweep_data["metric_goal"]
 
     # Get the run directory from the run object
-    if hasattr(run, '_local_writer') and run._local_writer:
+    if hasattr(run, "_local_writer") and run._local_writer:
         run_dir = run._local_writer.run_dir
     else:
         # Fallback: find the latest run directory
@@ -622,7 +626,7 @@ def _update_local_sweep_best(
         conn = sqlite3.connect(str(db_path))
         cursor = conn.execute(
             "SELECT value FROM metrics WHERE name = ? ORDER BY step DESC LIMIT 1",
-            (metric_name,)
+            (metric_name,),
         )
         row = cursor.fetchone()
         if row:
@@ -645,22 +649,30 @@ def _update_local_sweep_best(
     else:
         is_better = best_value > current_best
 
-    run_id = run._local_writer.run_id if hasattr(run, '_local_writer') and run._local_writer else str(run_dir.name)
+    run_id = (
+        run._local_writer.run_id
+        if hasattr(run, "_local_writer") and run._local_writer
+        else str(run_dir.name)
+    )
 
     if is_better:
         sweep_data["best_value"] = best_value
         sweep_data["best_run_id"] = run_id
-        sweep_data["runs"].append({
-            "run_id": run_id,
-            "value": best_value,
-            "is_best": True,
-        })
+        sweep_data["runs"].append(
+            {
+                "run_id": run_id,
+                "value": best_value,
+                "is_best": True,
+            }
+        )
     else:
-        sweep_data["runs"].append({
-            "run_id": run_id,
-            "value": best_value,
-            "is_best": False,
-        })
+        sweep_data["runs"].append(
+            {
+                "run_id": run_id,
+                "value": best_value,
+                "is_best": False,
+            }
+        )
 
     with open(sweep_file, "w") as f:
         json.dump(sweep_data, f, indent=2)
@@ -710,7 +722,7 @@ def _get_median_at_step_local(
                         conn = sqlite3.connect(str(db_path))
                         cursor = conn.execute(
                             "SELECT value FROM metrics WHERE name = ? AND step = ?",
-                            (metric_name, step)
+                            (metric_name, step),
                         )
                         row = cursor.fetchone()
                         if row:
