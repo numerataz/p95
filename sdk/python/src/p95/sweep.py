@@ -36,13 +36,11 @@ Example usage:
 import contextvars
 import json
 import math
-import os
 import random
-import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from p95.client import P95Client
 from p95.config import get_config
