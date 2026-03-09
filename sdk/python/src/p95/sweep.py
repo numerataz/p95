@@ -589,7 +589,7 @@ def _build_grid_combinations(
 
 def _update_local_sweep_best(
     sweep_file: Path,
-    run: Run,
+    run: "Run",
     sweep_data: Dict[str, Any],
 ) -> None:
     """Update the best run for a local sweep."""
