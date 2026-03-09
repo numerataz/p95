@@ -415,7 +415,6 @@ def _run_local_agent(
     project: Optional[str],
 ) -> None:
     """Run agent for local sweeps."""
-    from p95.run import Run
 
     # Parse sweep ID
     parts = sweep_id.split(":")
