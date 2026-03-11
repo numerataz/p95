@@ -32,6 +32,7 @@ from p95.config import configure
 from p95.exceptions import (
     APIError,
     AuthenticationError,
+    EarlyStopException,
     ServerError,
     P95Error,
     ValidationError,
@@ -39,22 +40,33 @@ from p95.exceptions import (
 from p95.run import Run, resume
 from p95.server import start_server, stop_server
 from p95.sweep import sweep, agent, should_prune, SweepConfig, ParameterSpec
+from p95.worker import Worker, WorkerCapabilities, Job, start_worker
 
 __version__ = "0.1.0"
 __all__ = [
+    # Core
     "Run",
     "resume",
     "configure",
+    # Server
     "start_server",
     "stop_server",
+    # Sweeps
     "sweep",
     "agent",
     "should_prune",
     "SweepConfig",
     "ParameterSpec",
+    # Workers (AI agent job execution)
+    "Worker",
+    "WorkerCapabilities",
+    "Job",
+    "start_worker",
+    # Exceptions
     "P95Error",
     "AuthenticationError",
     "APIError",
     "ValidationError",
     "ServerError",
+    "EarlyStopException",
 ]

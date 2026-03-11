@@ -1,4 +1,9 @@
-"""Console entrypoint for the bundled pnf CLI."""
+"""Console entrypoint for the p95 CLI.
+
+Supports both local mode (Go binary) and cloud mode (Python commands).
+Cloud commands: jobs, workers, runs (with cloud API), intervene
+Local commands: tui, ls, show, serve
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,10 @@ import shutil
 import sys
 from pathlib import Path
 from typing import Optional
+
+
+# Cloud commands that are handled by Python
+CLOUD_COMMANDS = {"jobs", "workers", "worker", "runs", "run"}
 
 
 def _platform_id() -> Optional[str]:
@@ -52,7 +61,28 @@ def _find_binary() -> Optional[str]:
     return shutil.which(binary_name)
 
 
+def _is_cloud_command() -> bool:
+    """Check if the command should be handled by cloud CLI."""
+    if len(sys.argv) < 2:
+        return False
+
+    cmd = sys.argv[1]
+    return cmd in CLOUD_COMMANDS
+
+
 def main() -> None:
+    """Main CLI entry point.
+
+    Routes to cloud CLI for cloud commands (jobs, workers, runs intervene),
+    or to the Go binary for local commands (tui, ls, show, serve).
+    """
+    # Check for cloud commands first
+    if _is_cloud_command():
+        from p95.cloud_cli import main_cloud
+        main_cloud()
+        return
+
+    # Fall back to Go binary for local commands
     binary = _find_binary()
     if not binary:
         print(

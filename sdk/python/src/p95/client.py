@@ -234,3 +234,28 @@ class P95Client:
         """
         response = self._request("GET", f"/runs/{run_id}/continuations")
         return response.get("continuations", [])
+
+    def get_pending_intervention(self, run_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the pending intervention for a run, if any.
+
+        Args:
+            run_id: The run ID
+
+        Returns:
+            Intervention dictionary or None if no pending intervention
+        """
+        response = self._request("GET", f"/runs/{run_id}/intervention/pending")
+        return response.get("intervention")
+
+    def ack_intervention(self, intervention_id: str) -> Dict[str, Any]:
+        """
+        Acknowledge and apply an intervention.
+
+        Args:
+            intervention_id: The intervention ID
+
+        Returns:
+            Updated intervention dictionary
+        """
+        return self._request("POST", f"/interventions/{intervention_id}/apply")

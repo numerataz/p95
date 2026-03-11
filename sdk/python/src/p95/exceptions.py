@@ -38,3 +38,22 @@ class ServerError(P95Error):
     """Raised when server management fails (e.g., binary not found, failed to start)."""
 
     pass
+
+
+class EarlyStopException(P95Error):
+    """Raised when an early stop intervention is applied.
+
+    Training loops should catch this exception to gracefully exit.
+
+    Example:
+        try:
+            for epoch in range(100):
+                train_step()
+                run.apply_intervention(run.check_intervention())
+        except EarlyStopException as e:
+            print(f"Early stop: {e.rationale}")
+    """
+
+    def __init__(self, rationale: str):
+        super().__init__(f"Early stop requested: {rationale}")
+        self.rationale = rationale

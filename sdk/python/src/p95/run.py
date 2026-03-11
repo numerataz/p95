@@ -10,7 +10,7 @@ import time
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from p95.config import SDKConfig, get_config
-from p95.exceptions import ValidationError
+from p95.exceptions import EarlyStopException, ValidationError
 from p95.utils import generate_run_name, get_git_info, get_system_info
 
 if TYPE_CHECKING:
@@ -379,6 +379,89 @@ class Run:
             self._local_writer._write_meta(meta)
         else:
             self._remote_client.add_run_tags(self._run_id, tags)
+
+    def check_intervention(self) -> Optional[Dict[str, Any]]:
+        """
+        Check for a pending intervention from an AI agent.
+
+        Call this periodically in your training loop to check if an AI
+        or human has requested a config change, early stop, or pause.
+
+        Returns:
+            Intervention dictionary if pending, None otherwise.
+            The dictionary contains:
+            - id: Intervention ID
+            - type: "adjust_config", "early_stop", "pause", "resume"
+            - config_delta: Config changes to apply (for adjust_config)
+            - rationale: Explanation for the intervention
+
+        Example:
+            for epoch in range(100):
+                train_step()
+                intervention = run.check_intervention()
+                if intervention:
+                    run.apply_intervention(intervention)
+        """
+        if self._config.mode == "local":
+            # Local mode doesn't support interventions
+            return None
+
+        return self._remote_client.get_pending_intervention(self._run_id)
+
+    def apply_intervention(self, intervention: Optional[Dict[str, Any]]) -> None:
+        """
+        Apply and acknowledge an intervention.
+
+        This method:
+        1. Updates the run's config if type is "adjust_config"
+        2. Raises EarlyStopException if type is "early_stop"
+        3. Marks the intervention as applied on the server
+
+        Args:
+            intervention: Intervention dictionary from check_intervention()
+
+        Raises:
+            EarlyStopException: If the intervention is an early stop request
+
+        Example:
+            try:
+                for epoch in range(100):
+                    train_step()
+                    intervention = run.check_intervention()
+                    if intervention:
+                        run.apply_intervention(intervention)
+            except EarlyStopException as e:
+                print(f"Training stopped early: {e.rationale}")
+        """
+        if intervention is None:
+            return
+
+        if self._config.mode == "local":
+            # Local mode doesn't support interventions
+            return
+
+        intervention_type = intervention.get("type")
+        rationale = intervention.get("rationale", "")
+
+        if intervention_type == "adjust_config":
+            config_delta = intervention.get("config_delta", {})
+            if config_delta:
+                # Update config on the server
+                self._remote_client.update_run_config(self._run_id, config_delta)
+                # Update local config tracking if exists
+                if self._initial_config is not None:
+                    self._initial_config.update(config_delta)
+
+        # Acknowledge the intervention
+        self._remote_client.ack_intervention(intervention["id"])
+
+        if intervention_type == "early_stop":
+            raise EarlyStopException(rationale)
+
+    @property
+    def config(self) -> Optional[Dict[str, Any]]:
+        """Return the current run configuration."""
+        return self._initial_config
 
     def complete(self) -> None:
         """Mark the run as completed successfully."""
