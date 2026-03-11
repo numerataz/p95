@@ -37,7 +37,7 @@ const (
 
 // MainModel is the unified main view model with lazygit-style layout
 type MainModel struct {
-	client *client.Client
+	client client.API
 	width  int
 	height int
 
@@ -102,7 +102,7 @@ type MainModel struct {
 }
 
 // NewMain creates a new main model
-func NewMain(c *client.Client) MainModel {
+func NewMain(c client.API) MainModel {
 	return MainModel{
 		client:           c,
 		zoneID:           zone.NewPrefix(),
