@@ -51,6 +51,7 @@ Repository = "https://github.com/numerataz/p95"
 
 [project.scripts]
 pnf = "p95.cli:main"
+p95 = "p95.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

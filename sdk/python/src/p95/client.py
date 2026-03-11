@@ -259,3 +259,19 @@ class P95Client:
             Updated intervention dictionary
         """
         return self._request("POST", f"/interventions/{intervention_id}/apply")
+
+    def link_run_to_job(self, job_id: str, run_id: str) -> Dict[str, Any]:
+        """
+        Link a run to a job.
+
+        Called automatically when a run is created within a job context
+        (when P95_JOB_ID environment variable is set).
+
+        Args:
+            job_id: The job ID
+            run_id: The run ID
+
+        Returns:
+            Updated job dictionary
+        """
+        return self._request("POST", f"/jobs/{job_id}/link-run", data={"run_id": run_id})

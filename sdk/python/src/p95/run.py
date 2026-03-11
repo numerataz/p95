@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import os
 import signal
 import sys
 import threading
@@ -213,6 +214,15 @@ class Run:
             git_info=self._git_info,
             system_info=self._system_info,
         )
+
+        # Auto-link to job if running within a job context
+        job_id = os.environ.get("P95_JOB_ID")
+        if job_id:
+            try:
+                self._remote_client.link_run_to_job(job_id, self._run_id)
+            except Exception as e:
+                # Log but don't fail - the run was created successfully
+                print(f"p95: Warning: Failed to link run to job {job_id}: {e}")
 
         self._remote_batcher = MetricsBatcher(
             client=self._remote_client,
