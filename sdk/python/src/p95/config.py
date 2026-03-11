@@ -3,7 +3,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal, Optional, Set
 
 
 def _default_logdir() -> str:
@@ -49,8 +49,9 @@ class SDKConfig:
     retry_delay: float = 1.0
 
 
-# Global configuration instance
+# Global configuration instance and set of fields explicitly set via configure()
 _config = SDKConfig()
+_explicitly_set: Set[str] = set()
 
 
 def configure(
@@ -68,6 +69,8 @@ def configure(
 ) -> SDKConfig:
     """
     Configure the SDK globally.
+
+    Explicit calls to configure() take priority over environment variables.
 
     Args:
         mode: Operating mode ("local" for file-based, "remote" for API server)
@@ -99,16 +102,20 @@ def configure(
             api_key="p95_xxxx",
         )
     """
-    global _config
+    global _config, _explicitly_set
 
     if mode is not None:
         _config.mode = mode
+        _explicitly_set.add("mode")
     if base_url is not None:
         _config.base_url = base_url
+        _explicitly_set.add("base_url")
     if api_key is not None:
         _config.api_key = api_key
+        _explicitly_set.add("api_key")
     if logdir is not None:
         _config.logdir = logdir
+        _explicitly_set.add("logdir")
     if batch_size is not None:
         _config.batch_size = batch_size
     if flush_interval is not None:
@@ -144,18 +151,20 @@ def _detect_mode() -> Literal["local", "remote"]:
 
 
 def get_config() -> SDKConfig:
-    """Get the current SDK configuration with environment variable overrides."""
+    """Get the current SDK configuration.
+
+    configure() takes highest priority. Environment variables fill in any
+    fields not explicitly set. Hardcoded defaults are used for the rest.
+    """
     global _config
 
-    # Auto-detect mode from environment
-    _config.mode = _detect_mode()
-
-    # Override with environment variables
-    if os.environ.get("P95_LOGDIR"):
+    if "mode" not in _explicitly_set:
+        _config.mode = _detect_mode()
+    if "logdir" not in _explicitly_set and os.environ.get("P95_LOGDIR"):
         _config.logdir = os.environ["P95_LOGDIR"]
-    if os.environ.get("P95_URL"):
+    if "base_url" not in _explicitly_set and os.environ.get("P95_URL"):
         _config.base_url = os.environ["P95_URL"]
-    if os.environ.get("P95_API_KEY"):
+    if "api_key" not in _explicitly_set and os.environ.get("P95_API_KEY"):
         _config.api_key = os.environ["P95_API_KEY"]
 
     return _config
