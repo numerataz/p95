@@ -76,6 +76,7 @@ Commands:
 
 Examples:
   pnf tui --logdir ./logs
+  pnf tui --url https://api.example.com --api-key p95_xxx --logdir ./logs
   pnf ls --logdir ./logs
   pnf ls --logdir ./logs --project demo-project
   pnf show <run-id> --logdir ./logs
@@ -83,6 +84,8 @@ Examples:
 
 Options:
   --logdir    Directory containing logs (default: ~/.p95/logs)
+  --url       Remote API base URL (tui command; fallback: P95_URL)
+  --api-key   Remote API key (tui command; fallback: P95_API_KEY)
   --help      Show this help message`)
 }
 
@@ -336,12 +339,20 @@ func showCmd(args []string) {
 func tuiCmd(args []string) {
 	fs := flag.NewFlagSet("tui", flag.ExitOnError)
 	logdir := fs.String("logdir", "", "Directory containing logs")
+	remoteURL := fs.String("url", "", "Remote API base URL")
+	apiKey := fs.String("api-key", "", "Remote API key")
 	fs.Parse(args)
 
 	if *logdir == "" {
 		*logdir = defaultLogDir()
 	}
 	*logdir = expandPath(*logdir)
+	if *remoteURL == "" {
+		*remoteURL = os.Getenv("P95_URL")
+	}
+	if *apiKey == "" {
+		*apiKey = os.Getenv("P95_API_KEY")
+	}
 
 	// Disable all logging - it breaks the TUI
 	log.SetOutput(io.Discard)
@@ -370,8 +381,13 @@ func tuiCmd(args []string) {
 	// Wait for server to be ready
 	time.Sleep(100 * time.Millisecond)
 
-	// Create API client pointing at local server
-	apiClient := client.New(fmt.Sprintf("http://%s", addr))
+	// Create API clients
+	localClient := client.New(fmt.Sprintf("http://%s", addr))
+	var apiClient client.API = localClient
+	if *remoteURL != "" {
+		remoteClient := client.NewWithAPIKey(*remoteURL, *apiKey)
+		apiClient = client.NewComposite(localClient, remoteClient)
+	}
 
 	// Create and run TUI
 	app := tui.New(apiClient)

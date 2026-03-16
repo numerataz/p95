@@ -17,7 +17,7 @@ import (
 
 // App is the main TUI application model
 type App struct {
-	client *client.Client
+	client client.API
 	width  int
 	height int
 
@@ -30,7 +30,7 @@ type App struct {
 }
 
 // New creates a new TUI application
-func New(apiClient *client.Client) App {
+func New(apiClient client.API) App {
 	zone.NewGlobal()
 	return App{
 		client: apiClient,

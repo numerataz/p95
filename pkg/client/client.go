@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,13 +16,21 @@ import (
 // Client is the API client for the TUI
 type Client struct {
 	baseURL    string
+	apiKey     string
 	httpClient *http.Client
 }
 
 // New creates a new API client
 func New(baseURL string) *Client {
+	return NewWithAPIKey(baseURL, "")
+}
+
+// NewWithAPIKey creates a new API client with optional bearer auth.
+func NewWithAPIKey(baseURL, apiKey string) *Client {
+	baseURL = strings.TrimRight(baseURL, "/")
 	return &Client{
 		baseURL: baseURL,
+		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -45,6 +54,9 @@ func (c *Client) request(method, path string, body any) ([]byte, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	if c.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
