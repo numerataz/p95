@@ -387,7 +387,7 @@ def _run_remote_agent(
             sweep_data=sweep,
             is_local=False,
         )
-        token = _set_sweep_context(ctx)
+        _token = _set_sweep_context(ctx)  # noqa: F841
 
         try:
             # Call the training function
@@ -478,7 +478,7 @@ def _run_local_agent(
             project=project,
             is_local=True,
         )
-        token = _set_sweep_context(ctx)
+        _token = _set_sweep_context(ctx)  # noqa: F841
 
         try:
             # Call the training function - it will create its own Run

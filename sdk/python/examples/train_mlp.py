@@ -16,15 +16,13 @@ Usage:
 """
 
 import os
-import time
-import math
-import random
 
 # Check if torch is available, use numpy fallback if not
 try:
     import torch
     import torch.nn as nn
     import torch.optim as optim
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -58,8 +56,10 @@ def make_synthetic_data(n_samples=1000, n_features=20, n_classes=3, seed=42):
 
 
 if HAS_TORCH:
+
     class MLP(nn.Module):
         """Simple MLP classifier."""
+
         def __init__(self, n_features, n_hidden, n_classes, dropout=0.2):
             super().__init__()
             self.net = nn.Sequential(
@@ -78,14 +78,21 @@ if HAS_TORCH:
 
 class NumpyMLP:
     """Simple numpy-based MLP for when PyTorch isn't available."""
+
     def __init__(self, n_features, n_hidden, n_classes, lr=0.01):
         self.lr = lr
         # Xavier initialization
-        self.W1 = np.random.randn(n_features, n_hidden).astype(np.float32) * np.sqrt(2.0 / n_features)
+        self.W1 = np.random.randn(n_features, n_hidden).astype(np.float32) * np.sqrt(
+            2.0 / n_features
+        )
         self.b1 = np.zeros(n_hidden, dtype=np.float32)
-        self.W2 = np.random.randn(n_hidden, n_hidden).astype(np.float32) * np.sqrt(2.0 / n_hidden)
+        self.W2 = np.random.randn(n_hidden, n_hidden).astype(np.float32) * np.sqrt(
+            2.0 / n_hidden
+        )
         self.b2 = np.zeros(n_hidden, dtype=np.float32)
-        self.W3 = np.random.randn(n_hidden, n_classes).astype(np.float32) * np.sqrt(2.0 / n_hidden)
+        self.W3 = np.random.randn(n_hidden, n_classes).astype(np.float32) * np.sqrt(
+            2.0 / n_hidden
+        )
         self.b3 = np.zeros(n_classes, dtype=np.float32)
 
     def relu(self, x):
@@ -212,12 +219,15 @@ def train_torch(run, config):
             val_acc = val_predicted.eq(y_val).sum().item() / len(y_val)
 
         # Log metrics
-        run.log_metrics({
-            "train/loss": train_loss,
-            "train/accuracy": train_acc,
-            "val/loss": val_loss,
-            "val/accuracy": val_acc,
-        }, step=epoch)
+        run.log_metrics(
+            {
+                "train/loss": train_loss,
+                "train/accuracy": train_acc,
+                "val/loss": val_loss,
+                "val/accuracy": val_acc,
+            },
+            step=epoch,
+        )
 
         # Check for interventions
         intervention = run.check_intervention()
@@ -232,9 +242,11 @@ def train_torch(run, config):
                             param_group["lr"] = value
                         print(f"Updated learning rate to {value}")
 
-        print(f"Epoch {epoch+1}/{config['epochs']} - "
-              f"train_loss: {train_loss:.4f}, train_acc: {train_acc:.4f}, "
-              f"val_loss: {val_loss:.4f}, val_acc: {val_acc:.4f}")
+        print(
+            f"Epoch {epoch + 1}/{config['epochs']} - "
+            f"train_loss: {train_loss:.4f}, train_acc: {train_acc:.4f}, "
+            f"val_loss: {val_loss:.4f}, val_acc: {val_acc:.4f}"
+        )
 
 
 def train_numpy(run, config):
@@ -294,12 +306,15 @@ def train_numpy(run, config):
         val_acc = model.accuracy(val_probs, y_val)
 
         # Log metrics
-        run.log_metrics({
-            "train/loss": train_loss,
-            "train/accuracy": train_acc,
-            "val/loss": val_loss,
-            "val/accuracy": val_acc,
-        }, step=epoch)
+        run.log_metrics(
+            {
+                "train/loss": train_loss,
+                "train/accuracy": train_acc,
+                "val/loss": val_loss,
+                "val/accuracy": val_acc,
+            },
+            step=epoch,
+        )
 
         # Check for interventions
         intervention = run.check_intervention()
@@ -312,9 +327,11 @@ def train_numpy(run, config):
                         model.lr = value
                         print(f"Updated learning rate to {value}")
 
-        print(f"Epoch {epoch+1}/{config['epochs']} - "
-              f"train_loss: {train_loss:.4f}, train_acc: {train_acc:.4f}, "
-              f"val_loss: {val_loss:.4f}, val_acc: {val_acc:.4f}")
+        print(
+            f"Epoch {epoch + 1}/{config['epochs']} - "
+            f"train_loss: {train_loss:.4f}, train_acc: {train_acc:.4f}, "
+            f"val_loss: {val_loss:.4f}, val_acc: {val_acc:.4f}"
+        )
 
 
 def main():
@@ -333,7 +350,7 @@ def main():
     # Determine project - use env var if set (for remote mode)
     project = os.environ.get("P95_PROJECT", "mlp-training")
 
-    print(f"Training MLP classifier")
+    print("Training MLP classifier")
     print(f"Config: {config}")
     print(f"Backend: {'PyTorch' if HAS_TORCH else 'NumPy'}")
 

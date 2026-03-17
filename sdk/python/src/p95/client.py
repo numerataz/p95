@@ -274,4 +274,6 @@ class P95Client:
         Returns:
             Updated job dictionary
         """
-        return self._request("POST", f"/jobs/{job_id}/link-run", data={"run_id": run_id})
+        return self._request(
+            "POST", f"/jobs/{job_id}/link-run", data={"run_id": run_id}
+        )

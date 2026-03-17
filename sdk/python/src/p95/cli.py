@@ -79,6 +79,7 @@ def main() -> None:
     # Check for cloud commands first
     if _is_cloud_command():
         from p95.cloud_cli import main_cloud
+
         main_cloud()
         return
 
