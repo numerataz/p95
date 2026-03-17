@@ -14,7 +14,7 @@ import (
 
 // RunsListModel is the runs list view model
 type RunsListModel struct {
-	client *client.Client
+	client client.API
 	width  int
 	height int
 
@@ -28,7 +28,7 @@ type RunsListModel struct {
 }
 
 // NewRunsList creates a new runs list model
-func NewRunsList(c *client.Client) RunsListModel {
+func NewRunsList(c client.API) RunsListModel {
 	return RunsListModel{
 		client: c,
 	}

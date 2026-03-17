@@ -21,7 +21,7 @@ const (
 
 // DashboardModel is the dashboard view model
 type DashboardModel struct {
-	client *client.Client
+	client client.API
 	width  int
 	height int
 
@@ -39,7 +39,7 @@ type DashboardModel struct {
 }
 
 // NewDashboard creates a new dashboard model
-func NewDashboard(c *client.Client) DashboardModel {
+func NewDashboard(c client.API) DashboardModel {
 	return DashboardModel{
 		client: c,
 		focus:  FocusTeams,

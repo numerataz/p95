@@ -34,7 +34,7 @@ type MetricInfo struct {
 
 // RunDetailModel is the run detail view model
 type RunDetailModel struct {
-	client *client.Client
+	client client.API
 	width  int
 	height int
 
@@ -68,7 +68,7 @@ type RunDetailModel struct {
 }
 
 // NewRunDetail creates a new run detail model
-func NewRunDetail(c *client.Client) RunDetailModel {
+func NewRunDetail(c client.API) RunDetailModel {
 	return RunDetailModel{
 		client:     c,
 		charts:     make(map[string]*components.Chart),
