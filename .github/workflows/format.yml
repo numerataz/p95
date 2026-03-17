@@ -1,0 +1,97 @@
+name: Format Check
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ruff-format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Run ruff format check
+        run: uvx ruff format --check
+
+      - name: Apply ruff format
+        if: failure() && github.event_name == 'pull_request'
+        run: uvx ruff format
+
+      - name: Suggest format fixes
+        if: failure() && github.event_name == 'pull_request'
+        uses: reviewdog/action-suggester@v1
+        with:
+          tool_name: ruff-format
+          filter_mode: diff_context
+          fail_level: any
+
+  ruff-lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Run ruff check
+        run: uvx ruff check
+
+      - name: Setup reviewdog
+        if: failure() && github.event_name == 'pull_request'
+        uses: reviewdog/action-setup@v1
+
+      - name: Apply ruff fixes
+        if: failure() && github.event_name == 'pull_request'
+        run: uvx ruff check --fix
+        continue-on-error: true
+
+      - name: Suggest ruff fixes
+        if: failure() && github.event_name == 'pull_request'
+        uses: reviewdog/action-suggester@v1
+        with:
+          tool_name: ruff-check
+          filter_mode: diff_context
+          fail_level: none
+
+      - name: Post unfixable ruff errors
+        if: failure() && github.event_name == 'pull_request'
+        run: |
+          uvx ruff check --output-format=rdjson | reviewdog -f=rdjson -reporter=github-pr-review -fail-level=none
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  prettier-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run prettier check
+        run: npx prettier --check .
+
+      - name: Apply prettier format
+        if: failure() && github.event_name == 'pull_request'
+        run: npx prettier --write .
+
+      - name: Suggest prettier fixes
+        if: failure() && github.event_name == 'pull_request'
+        uses: reviewdog/action-suggester@v1
+        with:
+          tool_name: prettier
+          filter_mode: diff_context
+          fail_level: any

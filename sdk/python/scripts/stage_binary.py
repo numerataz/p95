@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""Stage the platform-specific pnf binary into the Python package."""
+
+from __future__ import annotations
+
+import os
+import platform
+import shutil
+import sys
+from pathlib import Path
+
+
+def _platform_id() -> str | None:
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+
+    if machine in {"x86_64", "amd64"}:
+        arch = "amd64"
+    elif machine in {"aarch64", "arm64"}:
+        arch = "arm64"
+    else:
+        return None
+
+    if system == "darwin":
+        return f"darwin-{arch}"
+    if system == "linux":
+        return f"linux-{arch}"
+    if system == "windows":
+        return f"windows-{arch}"
+    return None
+
+
+def main() -> int:
+    repo_root = Path(__file__).resolve().parents[3]
+    binary_path = os.environ.get("P95_BINARY_PATH")
+    if binary_path:
+        binary = Path(binary_path)
+    else:
+        binary = repo_root / "pnf"
+
+    if platform.system() == "Windows" and binary.suffix.lower() != ".exe":
+        binary = binary.with_suffix(".exe")
+
+    if not binary.is_file():
+        print(f"Binary not found: {binary}", file=sys.stderr)
+        return 1
+
+    platform_id = os.environ.get("P95_PLATFORM_ID") or _platform_id()
+    if not platform_id:
+        print("Unsupported platform for staging", file=sys.stderr)
+        return 1
+
+    dest_dir = repo_root / "sdk" / "python" / "src" / "p95" / "bin" / platform_id
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    binary_name = "pnf.exe" if platform_id.startswith("windows-") else "pnf"
+    dest = dest_dir / binary_name
+    shutil.copy2(binary, dest)
+    if not platform_id.startswith("windows-"):
+        dest.chmod(0o755)
+
+    print(f"Staged binary to {dest}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

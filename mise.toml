@@ -1,0 +1,120 @@
+[tools]
+go = "1.24"
+node = "20"
+python = "3.12"
+
+# ===================
+# Build tasks
+# ===================
+
+[tasks.build-web]
+description = "Build the web UI"
+dir = "web"
+run = "npm install && npm run build"
+
+[tasks.build-sdk]
+description = "Install the Python SDK in development mode"
+dir = "sdk/python"
+run = "pip install -e ."
+
+[tasks.build-go]
+description = "Build the Go binary (dev mode, no embedded web)"
+run = "go build -tags dev -o bin/pnf ./cmd/pnf"
+
+[tasks.build-go-release]
+description = "Build the Go binary with embedded web UI"
+depends = ["build-web"]
+run = "go build -o bin/pnf ./cmd/pnf"
+
+[tasks.build]
+description = "Build everything (go binary dev mode + sdk)"
+depends = ["build-go", "build-sdk"]
+
+[tasks.build-release]
+description = "Build release (web, sdk, go binary with embedded web)"
+depends = ["build-web", "build-sdk", "build-go-release"]
+
+# ===================
+# Run tasks
+# ===================
+
+[tasks.serve]
+description = "Start the local web server (API only, no UI)"
+depends = ["build-go"]
+run = "./bin/pnf serve --logdir {{option(name=\"logdir\", default=\"./logs\")}} --port {{option(name=\"port\", default=\"6767\")}} --open=false"
+
+[tasks.serve-ui]
+description = "Start the local web server with embedded UI"
+depends = ["build-go-release"]
+run = "./bin/pnf serve --logdir {{option(name=\"logdir\", default=\"./logs\")}} --port {{option(name=\"port\", default=\"6767\")}}"
+
+[tasks.tui]
+description = "Run the interactive TUI"
+depends = ["build-go"]
+raw = true
+run = "./bin/pnf tui --logdir {{option(name=\"logdir\", default=\"./logs\")}}"
+
+[tasks.ls]
+description = "List projects and runs"
+depends = ["build-go"]
+run = "./bin/pnf ls --logdir {{option(name=\"logdir\", default=\"./logs\")}} {{option(name=\"project\", default=\"\")}}"
+
+# ===================
+# Demo/test tasks
+# ===================
+
+[tasks.demo]
+description = "Run the demo Python script (starts server with UI)"
+depends = ["build-release"]
+env = { P95_LOGDIR = "./logs", P95_BINARY = "./bin/pnf" }
+run = "python examples/local_mode_demo.py"
+
+[tasks.demo-simple]
+description = "Run simple training demo"
+depends = ["build-release"]
+env = { P95_LOGDIR = "./logs", P95_BINARY = "./bin/pnf" }
+run = "python examples/simple_training.py"
+
+[tasks.demo-multistage]
+description = "Run multi-stage training with continuations"
+depends = ["build-release"]
+env = { P95_LOGDIR = "./logs", P95_BINARY = "./bin/pnf" }
+run = "python examples/multi_stage_training.py"
+
+# ===================
+# Development tasks
+# ===================
+
+[tasks.dev-web]
+description = "Run web UI in development mode (hot reload)"
+dir = "web"
+run = "npm install && npm run dev"
+
+[tasks.dev]
+description = "Run API + web UI dev server (fastest for development)"
+depends = ["build-go"]
+run = """
+# Start API server in background
+./bin/pnf serve --logdir {{option(name=\"logdir\", default=\"./logs\")}} --port 6767 --open=false &
+API_PID=$!
+
+# Start web dev server (connects to API on :6767)
+cd web && npm install && npm run dev &
+WEB_PID=$!
+
+# Wait for either to exit
+trap "kill $API_PID $WEB_PID 2>/dev/null" EXIT
+wait
+"""
+
+[tasks.test]
+description = "Run Go tests"
+run = "go test ./..."
+
+[tasks.fmt]
+description = "Format Go code"
+run = "go fmt ./..."
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = "rm -rf bin/ web/dist"
