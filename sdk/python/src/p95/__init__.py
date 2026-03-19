@@ -41,6 +41,16 @@ from p95.run import Run, resume
 from p95.server import start_server, stop_server
 from p95.sweep import sweep, agent, should_prune, SweepConfig, ParameterSpec
 from p95.worker import Worker, WorkerCapabilities, Job, start_worker
+from p95.evaluation import (
+    Dataset,
+    Scorer,
+    Evaluation,
+    EvaluationConfig,
+    EvaluationTarget,
+    EvaluationResult,
+    EvaluationClient,
+    evaluate,
+)
 
 __version__ = "0.1.0"
 __all__ = [
@@ -62,6 +72,15 @@ __all__ = [
     "WorkerCapabilities",
     "Job",
     "start_worker",
+    # Evaluations
+    "Dataset",
+    "Scorer",
+    "Evaluation",
+    "EvaluationConfig",
+    "EvaluationTarget",
+    "EvaluationResult",
+    "EvaluationClient",
+    "evaluate",
     # Exceptions
     "P95Error",
     "AuthenticationError",

@@ -367,6 +367,62 @@ class Run:
         """
         self.log_metrics({name: value}, step=step)
 
+    def log_eval(
+        self,
+        message: str,
+        rating: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """
+        Log a qualitative evaluation annotation at the current step.
+
+        Use this to record human judgments, observations, or notes about
+        model outputs during training or inference.
+
+        Args:
+            message: The evaluation message or annotation
+            rating: Optional rating (e.g., "good", "bad", "neutral")
+            metadata: Optional additional metadata
+
+        Example:
+            # Simple annotation
+            run.log_eval("Output looks coherent and relevant")
+
+            # With rating
+            run.log_eval("Response was off-topic", rating="bad")
+
+            # With metadata
+            run.log_eval(
+                "Great creative writing sample",
+                rating="good",
+                metadata={"sample_id": "abc123", "category": "creativity"}
+            )
+        """
+        with self._lock:
+            step = self._step  # Always use current step
+            ts = time.time()
+
+            eval_data = {
+                "message": message,
+                "step": step,
+                "timestamp": ts,
+            }
+            if rating:
+                eval_data["rating"] = rating
+            if metadata:
+                eval_data["metadata"] = metadata
+
+            if self._config.mode == "local":
+                # For local mode, append to eval_logs in meta
+                meta = self._local_writer._read_meta()
+                eval_logs = meta.get("eval_logs", [])
+                eval_logs.append(eval_data)
+                meta["eval_logs"] = eval_logs
+                self._local_writer._write_meta(meta)
+            else:
+                # For remote mode, send to API
+                self._remote_client.log_eval(self._run_id, eval_data)
+
     def flush(self) -> None:
         """Force flush all buffered metrics."""
         if self._config.mode == "local":

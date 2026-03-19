@@ -277,3 +277,13 @@ class P95Client:
         return self._request(
             "POST", f"/jobs/{job_id}/link-run", data={"run_id": run_id}
         )
+
+    def log_eval(self, run_id: str, eval_data: Dict[str, Any]) -> None:
+        """
+        Log a qualitative evaluation annotation.
+
+        Args:
+            run_id: The run ID
+            eval_data: Evaluation data containing message, step, timestamp, etc.
+        """
+        self._request("POST", f"/runs/{run_id}/evals", data=eval_data)
