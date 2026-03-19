@@ -6,8 +6,6 @@ import tempfile
 import time
 from unittest import mock
 
-import pytest
-
 
 class TestLogEvalLocal:
     """Tests for log_eval in local mode."""
@@ -163,7 +161,7 @@ class TestLogEvalRemote:
             mock_batcher_class.return_value = mock_batcher
 
             # Patch the imports within run module
-            with mock.patch.object(Run, "_init_remote_mode") as mock_init:
+            with mock.patch.object(Run, "_init_remote_mode"):
                 # Create run with mocked internals
                 run = object.__new__(Run)
                 run._config = mock.MagicMock()

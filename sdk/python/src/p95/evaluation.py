@@ -7,11 +7,14 @@ models or endpoints using datasets and scorers.
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 from pathlib import Path
 
 from p95.client import P95Client
 from p95.config import SDKConfig
+
+if TYPE_CHECKING:
+    import pandas
 
 
 @dataclass
