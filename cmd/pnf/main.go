@@ -366,8 +366,8 @@ func tuiCmd(args []string) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
 
-	// Start local server in background (no web UI needed for TUI mode)
-	srv, err := server.New(*logdir, nil)
+	// Start local server in background, with web UI so 'o' can open it in a browser
+	srv, err := server.New(*logdir, web.DistFS())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating server: %v\n", err)
 		os.Exit(1)
@@ -389,8 +389,14 @@ func tuiCmd(args []string) {
 		apiClient = client.NewComposite(localClient, remoteClient)
 	}
 
+	// Determine which dashboard to open with 'o'
+	dashboardURL := fmt.Sprintf("http://127.0.0.1:%d", port)
+	if *apiKey != "" {
+		dashboardURL = "https://p.ninetyfive.gg"
+	}
+
 	// Create and run TUI
-	app := tui.New(apiClient)
+	app := tui.New(apiClient, dashboardURL)
 	p := tea.NewProgram(app, tea.WithAltScreen(), tea.WithMouseAllMotion())
 
 	if _, err := p.Run(); err != nil {

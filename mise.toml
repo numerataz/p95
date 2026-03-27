@@ -50,7 +50,7 @@ run = "./bin/pnf serve --logdir {{option(name=\"logdir\", default=\"./logs\")}} 
 
 [tasks.tui]
 description = "Run the interactive TUI"
-depends = ["build-go"]
+depends = ["build-go-release"]
 raw = true
 run = "./bin/pnf tui --logdir {{option(name=\"logdir\", default=\"./logs\")}}"
 
