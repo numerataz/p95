@@ -45,7 +45,7 @@ def simulate_training():
             "optimizer": "adam",
             "epochs": 50,
         },
-        start_server=True,  # Automatically start viewer and open browser
+        start_tui=True,  # Automatically open the TUI in a new terminal window
     ) as run:
         print(f"Run ID: {run.id}")
         print(f"Run directory: {run.logdir}")

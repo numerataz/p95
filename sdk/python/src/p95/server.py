@@ -41,6 +41,7 @@ class ServerManager:
         port: int = DEFAULT_PORT,
         host: str = DEFAULT_HOST,
         open_browser: bool = True,
+        open_tui: bool = False,
         binary_path: Optional[str] = None,
         keep_running: bool = False,
         project: Optional[str] = None,
@@ -54,6 +55,9 @@ class ServerManager:
             port: Port to run the server on
             host: Host to bind the server to
             open_browser: Whether to open the browser automatically
+            open_tui: Whether to open the TUI in a new terminal window instead of
+                the browser. When True, open_browser is ignored and no HTTP server
+                is started (the TUI manages its own internal server).
             binary_path: Explicit path to the pnf binary (auto-discovered if not provided)
             keep_running: If True, don't stop the server when the manager is garbage collected
             project: Project name (used as fallback if run_id not provided)
@@ -63,6 +67,7 @@ class ServerManager:
         self.port = port
         self.host = host
         self.open_browser = open_browser
+        self.open_tui = open_tui
         self.binary_path = binary_path
         self.keep_running = keep_running
         self.project = project
@@ -74,15 +79,36 @@ class ServerManager:
 
     def start(self) -> str:
         """
-        Start the server.
+        Start the server (or TUI).
+
+        When open_tui=True, launches the TUI in a new terminal window and returns
+        a placeholder URL. The TUI manages its own internal server so no HTTP
+        server is started.
 
         Returns:
-            The URL where the server is running
+            The URL where the HTTP server is running, or a logdir:// URI when
+            open_tui=True
 
         Raises:
             ServerError: If the binary cannot be found or the server fails to start
         """
         if self._started:
+            return self.url
+
+        # Find the binary (needed for both serve and tui paths)
+        binary = self._find_binary()
+        if not binary:
+            raise ServerError(
+                "Could not find 'pnf' binary. Please ensure it's installed and in your PATH, "
+                "or specify the path explicitly with server_binary='/path/to/pnf'"
+            )
+
+        # TUI path: open a new terminal window running `pnf tui` and return early.
+        # The TUI starts its own internal server so we don't need to start pnf serve.
+        if self.open_tui:
+            self._open_tui(binary)
+            self._started = True
+            print(f"p95: Launched TUI for {self.logdir}")
             return self.url
 
         # Check if a server is already running on this port
@@ -94,14 +120,6 @@ class ServerManager:
             print(f"p95: Navigating to run in existing viewer at {self.url}")
             self._started = True
             return self.url
-
-        # Find the binary
-        binary = self._find_binary()
-        if not binary:
-            raise ServerError(
-                "Could not find 'pnf' binary. Please ensure it's installed and in your PATH, "
-                "or specify the path explicitly with server_binary='/path/to/pnf'"
-            )
 
         # Build the command (we handle browser opening ourselves for project-specific URLs)
         cmd = [
@@ -192,6 +210,12 @@ class ServerManager:
 
         webbrowser.open(self.run_url)
 
+    def _open_tui(self, binary: str) -> None:
+        """Launch `pnf tui` in the current terminal (blocks until the user exits)."""
+        logdir = os.path.abspath(self.logdir)
+        cmd_parts = [binary, "tui", f"--logdir={logdir}"]
+        subprocess.run(cmd_parts)
+
     def _set_active_run(self) -> None:
         """Tell the server about the active run so the UI can navigate to it."""
         if not self.run_id:
@@ -258,12 +282,20 @@ class ServerManager:
         if bundled_binary:
             return bundled_binary
 
-        # Check system PATH
         binary_name = (
             f"{self.BINARY_NAME}.exe"
             if platform.system() == "Windows"
             else self.BINARY_NAME
         )
+
+        # Check ./bin/<binary> relative to CWD before PATH — in development the Go
+        # binary is built to ./bin/pnf, and the Python entry-point script of the
+        # same name would otherwise shadow it via shutil.which.
+        cwd_bin_binary = os.path.join(os.getcwd(), "bin", binary_name)
+        if os.path.isfile(cwd_bin_binary) and os.access(cwd_bin_binary, os.X_OK):
+            return cwd_bin_binary
+
+        # Check system PATH
         path_binary = shutil.which(binary_name)
         if path_binary:
             return path_binary

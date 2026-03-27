@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -17,9 +19,10 @@ import (
 
 // App is the main TUI application model
 type App struct {
-	client client.API
-	width  int
-	height int
+	client       client.API
+	dashboardURL string
+	width        int
+	height       int
 
 	// Main view (unified lazygit-style layout)
 	main views.MainModel
@@ -30,11 +33,12 @@ type App struct {
 }
 
 // New creates a new TUI application
-func New(apiClient client.API) App {
+func New(apiClient client.API, dashboardURL string) App {
 	zone.NewGlobal()
 	return App{
-		client: apiClient,
-		main:   views.NewMain(apiClient),
+		client:       apiClient,
+		dashboardURL: dashboardURL,
+		main:         views.NewMain(apiClient),
 	}
 }
 
@@ -63,6 +67,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return a, tea.Quit
+		case "o":
+			if a.dashboardURL != "" {
+				openURL(a.dashboardURL)
+			}
 		case "?":
 			// Show help (could be implemented)
 		}
@@ -122,6 +130,20 @@ func (a App) View() string {
 	))
 }
 
+// openURL opens a URL in the default browser.
+func openURL(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	_ = cmd.Start()
+}
+
 // renderHeader renders the application header
 func (a App) renderHeader() string {
 	title := styles.Header.Render(" p95 ")
@@ -145,6 +167,7 @@ func (a App) renderStatusBar() string {
 		styles.HelpKey.Render("t") + styles.HelpDesc.Render(" switch style"),
 		styles.HelpKey.Render("space") + styles.HelpDesc.Render(" compare run"),
 		styles.HelpKey.Render("c") + styles.HelpDesc.Render(" clear compare"),
+		styles.HelpKey.Render("o") + styles.HelpDesc.Render(" open web"),
 	}
 
 	helpText := strings.Join(help, "  ")
