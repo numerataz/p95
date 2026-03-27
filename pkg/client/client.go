@@ -267,6 +267,12 @@ func (c *Client) GetMetricNames(runID uuid.UUID) ([]string, error) {
 	return resp.Metrics, nil
 }
 
+// RawGet makes a GET request and returns the raw response bytes.
+// Used by the server to proxy remote API responses.
+func (c *Client) RawGet(path string) ([]byte, error) {
+	return c.request("GET", path, nil)
+}
+
 // GetContinuations returns all continuations for a run
 func (c *Client) GetContinuations(runID uuid.UUID) ([]Continuation, error) {
 	data, err := c.request("GET", fmt.Sprintf("/api/v1/runs/%s/continuations", runID), nil)

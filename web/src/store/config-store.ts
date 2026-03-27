@@ -4,6 +4,7 @@ export interface AppConfig {
   mode: "local";
   version: string;
   logdir?: string;
+  hasRemote?: boolean;
   features: {
     auth: boolean;
     teams: boolean;
