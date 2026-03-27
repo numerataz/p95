@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { RunStatusBadge } from "@/components/runs/run-status-badge";
 import { formatRelativeTime, formatDuration } from "@/lib/utils";
-import { ChevronLeft, Activity, X } from "lucide-react";
+import { ChevronLeft, Activity, X, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ComparisonChart } from "@/components/metrics/comparison-chart";
@@ -28,9 +28,13 @@ export const Route = createFileRoute("/projects/$projectSlug")({
 });
 
 function ProjectRunsPage() {
-  // Get projectSlug from URL
+  // Get projectSlug and source/team from URL
   const projectSlug =
     window.location.pathname.split("/projects/")[1]?.split("/")[0] || "";
+  const searchParams = new URLSearchParams(window.location.search);
+  const source = searchParams.get("source") || "local";
+  const team = searchParams.get("team") || "";
+  const isRemote = source === "remote";
 
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
   const [xAxisMode, setXAxisMode] = useState<XAxisMode>("step");
@@ -38,8 +42,8 @@ function ProjectRunsPage() {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
   const { data: runs, isLoading } = useQuery({
-    queryKey: ["project-runs", projectSlug],
-    queryFn: () => getProjectRuns(projectSlug),
+    queryKey: ["project-runs", projectSlug, source, team],
+    queryFn: () => getProjectRuns(projectSlug, { source, team }),
     refetchInterval: 3000, // Poll for updates
   });
 
@@ -114,6 +118,12 @@ function ProjectRunsPage() {
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <Activity className="h-7 w-7" />
               {projectSlug}
+              {isRemote && (
+                <Badge variant="outline" className="text-sm font-normal gap-1">
+                  <Cloud className="h-3 w-3" />
+                  Cloud
+                </Badge>
+              )}
             </h1>
             <p className="text-muted-foreground">
               {runs?.length || 0} run{(runs?.length || 0) !== 1 ? "s" : ""}

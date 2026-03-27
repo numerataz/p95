@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/api/projects";
+import type { Project } from "@/api/projects";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,13 @@ import { formatRelativeTime } from "@/lib/utils";
 export const Route = createFileRoute("/projects/")({
   component: ProjectsPage,
 });
+
+function projectHref(project: Project): string {
+  if (project.source === "remote" && project.team_slug) {
+    return `/projects/${project.slug}?source=remote&team=${encodeURIComponent(project.team_slug)}`;
+  }
+  return `/projects/${project.slug}`;
+}
 
 function ProjectsPage() {
   const { data: projects, isLoading } = useQuery({
@@ -62,8 +70,8 @@ with Run(project="my-project") as run:
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <a
-              key={project.slug}
-              href={`/projects/${project.slug}`}
+              key={`${project.source}-${project.team_slug}-${project.slug}`}
+              href={projectHref(project)}
               className="block"
             >
               <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
@@ -75,13 +83,22 @@ with Run(project="my-project") as run:
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between text-sm">
-                    <Badge variant="secondary">
-                      {project.run_count} run
-                      {project.run_count !== 1 ? "s" : ""}
-                    </Badge>
-                    <span className="text-muted-foreground">
-                      {formatRelativeTime(project.last_updated)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        {project.run_count} run
+                        {project.run_count !== 1 ? "s" : ""}
+                      </Badge>
+                      {project.source === "remote" && (
+                        <Badge variant="outline" className="text-xs">
+                          Cloud
+                        </Badge>
+                      )}
+                    </div>
+                    {project.last_updated && (
+                      <span className="text-muted-foreground">
+                        {formatRelativeTime(project.last_updated)}
+                      </span>
+                    )}
                   </div>
                 </CardContent>
               </Card>

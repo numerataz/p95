@@ -6,6 +6,8 @@ export interface Project {
   name: string;
   run_count: number;
   last_updated: string;
+  source: "local" | "remote";
+  team_slug?: string;
 }
 
 export async function getProjects(): Promise<Project[]> {
@@ -13,8 +15,18 @@ export async function getProjects(): Promise<Project[]> {
   return response.data.projects || [];
 }
 
-export async function getProjectRuns(projectSlug: string): Promise<Run[]> {
-  const response = await apiClient.get<Run[]>(`/projects/${projectSlug}/runs`);
+export async function getProjectRuns(
+  projectSlug: string,
+  opts?: { source?: string; team?: string },
+): Promise<Run[]> {
+  const params: Record<string, string> = {};
+  if (opts?.source === "remote" && opts.team) {
+    params.source = "remote";
+    params.team = opts.team;
+  }
+  const response = await apiClient.get<Run[]>(`/projects/${projectSlug}/runs`, {
+    params,
+  });
   return response.data;
 }
 
