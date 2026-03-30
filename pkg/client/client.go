@@ -273,6 +273,12 @@ func (c *Client) RawGet(path string) ([]byte, error) {
 	return c.request("GET", path, nil)
 }
 
+// RawPost makes a POST request and returns the raw response bytes.
+// Used by the server to proxy remote API responses.
+func (c *Client) RawPost(path string, body any) ([]byte, error) {
+	return c.request("POST", path, body)
+}
+
 // GetContinuations returns all continuations for a run
 func (c *Client) GetContinuations(runID uuid.UUID) ([]Continuation, error) {
 	data, err := c.request("GET", fmt.Sprintf("/api/v1/runs/%s/continuations", runID), nil)
