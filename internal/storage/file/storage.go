@@ -726,6 +726,180 @@ func (s *Storage) GetContinuations(ctx context.Context, runID string) ([]*domain
 	return continuations, nil
 }
 
+// ListSweeps returns all sweeps in a project.
+func (s *Storage) ListSweeps(ctx context.Context, project string) ([]domain.Sweep, error) {
+	sweepsDir := filepath.Join(s.logdir, project, ".sweeps")
+	entries, err := os.ReadDir(sweepsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []domain.Sweep{}, nil
+		}
+		return nil, fmt.Errorf("failed to read sweeps directory: %w", err)
+	}
+
+	var sweeps []domain.Sweep
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		sweep, err := s.loadSweep(project, entry.Name())
+		if err != nil {
+			continue
+		}
+		sweeps = append(sweeps, *sweep)
+	}
+
+	sort.Slice(sweeps, func(i, j int) bool {
+		return sweeps[i].CreatedAt.After(sweeps[j].CreatedAt)
+	})
+
+	return sweeps, nil
+}
+
+// GetSweep returns a sweep by ID within a project.
+func (s *Storage) GetSweep(ctx context.Context, project, sweepID string) (*domain.Sweep, error) {
+	return s.loadSweep(project, sweepID)
+}
+
+// GetSweepByID searches all projects for a sweep by ID.
+func (s *Storage) GetSweepByID(ctx context.Context, sweepID string) (*domain.Sweep, string, error) {
+	projects, err := os.ReadDir(s.logdir)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read logdir: %w", err)
+	}
+
+	for _, project := range projects {
+		if !project.IsDir() {
+			continue
+		}
+		sweep, err := s.loadSweep(project.Name(), sweepID)
+		if err == nil {
+			return sweep, project.Name(), nil
+		}
+	}
+
+	return nil, "", fmt.Errorf("sweep not found: %s", sweepID)
+}
+
+// GetSweepRuns returns runs belonging to a sweep.
+func (s *Storage) GetSweepRuns(ctx context.Context, project, sweepID string) ([]*domain.Run, error) {
+	sweepFile := filepath.Join(s.logdir, project, ".sweeps", sweepID, "sweep.json")
+	data, err := os.ReadFile(sweepFile)
+	if err != nil {
+		return nil, fmt.Errorf("sweep not found: %w", err)
+	}
+
+	var raw struct {
+		Runs []struct {
+			RunID string `json:"run_id"`
+		} `json:"runs"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse sweep: %w", err)
+	}
+
+	var runs []*domain.Run
+	for _, r := range raw.Runs {
+		if r.RunID == "" {
+			continue
+		}
+		run, err := s.GetRun(ctx, r.RunID)
+		if err != nil {
+			continue
+		}
+		runs = append(runs, run)
+	}
+
+	return runs, nil
+}
+
+// StopSweep updates a sweep's status to stopped.
+func (s *Storage) StopSweep(ctx context.Context, project, sweepID string) error {
+	sweepFile := filepath.Join(s.logdir, project, ".sweeps", sweepID, "sweep.json")
+	data, err := os.ReadFile(sweepFile)
+	if err != nil {
+		return fmt.Errorf("sweep not found: %w", err)
+	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("failed to parse sweep: %w", err)
+	}
+
+	raw["status"] = "stopped"
+
+	updated, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(sweepFile, updated, 0644)
+}
+
+func (s *Storage) loadSweep(project, sweepID string) (*domain.Sweep, error) {
+	sweepFile := filepath.Join(s.logdir, project, ".sweeps", sweepID, "sweep.json")
+	data, err := os.ReadFile(sweepFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var raw struct {
+		ID            string                      `json:"id"`
+		Name          string                      `json:"name"`
+		Status        string                      `json:"status"`
+		Method        string                      `json:"method"`
+		MetricName    string                      `json:"metric_name"`
+		MetricGoal    string                      `json:"metric_goal"`
+		SearchSpace   domain.SearchSpace          `json:"search_space"`
+		Config        map[string]any              `json:"config"`
+		MaxRuns       *int                        `json:"max_runs"`
+		EarlyStopping *domain.EarlyStoppingConfig `json:"early_stopping"`
+		BestRunID     *string                     `json:"best_run_id"`
+		BestValue     *float64                    `json:"best_value"`
+		RunCount      int                         `json:"run_count"`
+		GridIndex     int                         `json:"grid_index"`
+		StartedAt     string                      `json:"started_at"`
+		CreatedAt     string                      `json:"created_at"`
+	}
+
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse sweep.json: %w", err)
+	}
+
+	createdAt, _ := time.Parse(time.RFC3339, raw.CreatedAt)
+	startedAt := createdAt
+	if raw.StartedAt != "" {
+		if t, err := time.Parse(time.RFC3339, raw.StartedAt); err == nil {
+			startedAt = t
+		}
+	}
+
+	// Use directory name as fallback ID
+	id := raw.ID
+	if id == "" {
+		id = sweepID
+	}
+
+	return &domain.Sweep{
+		ID:            id,
+		Name:          raw.Name,
+		Status:        domain.SweepStatus(raw.Status),
+		Method:        raw.Method,
+		MetricName:    raw.MetricName,
+		MetricGoal:    raw.MetricGoal,
+		SearchSpace:   raw.SearchSpace,
+		Config:        raw.Config,
+		MaxRuns:       raw.MaxRuns,
+		EarlyStopping: raw.EarlyStopping,
+		BestRunID:     raw.BestRunID,
+		BestValue:     raw.BestValue,
+		RunCount:      raw.RunCount,
+		GridIndex:     raw.GridIndex,
+		StartedAt:     startedAt,
+		CreatedAt:     createdAt,
+	}, nil
+}
+
 // findRunDir finds the directory for a run by ID.
 func (s *Storage) findRunDir(runID string) (string, error) {
 	projects, err := os.ReadDir(s.logdir)
