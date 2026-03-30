@@ -70,6 +70,7 @@ class Run:
         capture_system: Optional[bool] = None,
         # Server option (local mode only)
         start_server: bool = False,
+        start_tui: bool = False,
     ):
         """
         Initialize a new run.
@@ -90,6 +91,8 @@ class Run:
             capture_system: Whether to capture system information
             start_server: Automatically start the p95 viewer server and open the
                 browser (local mode only). The server stops when the run ends.
+            start_tui: Automatically open the p95 TUI in a new terminal window
+                (local mode only). The TUI manages its own internal server.
 
         Raises:
             ValidationError: If project format is invalid (remote mode)
@@ -133,6 +136,7 @@ class Run:
         self._remote_batcher: Optional["MetricsBatcher"] = None
         self._server_manager: Optional["ServerManager"] = None
         self._start_server = start_server
+        self._start_tui = start_tui
 
         # Capture info before creating run
         self._git_info = None
@@ -181,8 +185,17 @@ class Run:
         # Print local mode info
         print(f"p95: Logging to {self._local_writer.run_dir}")
 
-        # Start the viewer server if requested
-        if self._start_server:
+        # start_tui launches after training completes (see _finalize)
+        if self._start_tui:
+            from p95.server import ServerManager
+
+            self._server_manager = ServerManager(
+                logdir=self._config.logdir,
+                open_tui=True,
+                project=self._project,
+                run_id=self._run_id,
+            )
+        elif self._start_server:
             from p95.server import ServerManager
 
             self._server_manager = ServerManager(
@@ -506,6 +519,9 @@ class Run:
             self._local_writer.close()
             # Note: We don't stop the server here - it keeps running (TensorBoard-style)
             # so users can view results after training ends
+            # Launch TUI after the script fully exits
+            if self._server_manager is not None and self._start_tui:
+                atexit.register(self._server_manager.start)
         else:
             # Flush and stop remote batcher
             self._remote_batcher.flush()
