@@ -6,6 +6,11 @@ Track ML experiments locally. No server setup required.
 
 ```bash
 pip install p95
+
+uv install p95
+
+## Agentic skill
+npx skills add numerataz/instrument-experiment
 ```
 
 ## Usage
