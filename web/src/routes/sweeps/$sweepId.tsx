@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { getSweep, getSweepRuns, stopSweep, type SweepContext } from "@/api/sweeps";
+import {
+  getSweep,
+  getSweepRuns,
+  stopSweep,
+  type SweepContext,
+} from "@/api/sweeps";
 import { getMetricNames } from "@/api/metrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -124,9 +129,7 @@ function SweepDetailPage() {
         return {
           name: run.name,
           param:
-            typeof paramValue === "number"
-              ? paramValue
-              : String(paramValue),
+            typeof paramValue === "number" ? paramValue : String(paramValue),
           metric: metricValue,
           isBest: run.id === sweep.best_run_id,
         };
@@ -156,7 +159,17 @@ function SweepDetailPage() {
   return (
     <div className="space-y-6">
       {/* Back button */}
-      <a href={backHref} onClick={backHref ? undefined : (e) => { e.preventDefault(); window.history.back(); }}>
+      <a
+        href={backHref}
+        onClick={
+          backHref
+            ? undefined
+            : (e) => {
+                e.preventDefault();
+                window.history.back();
+              }
+        }
+      >
         <Button variant="ghost" size="sm" className="gap-1 -ml-2">
           <ChevronLeft className="h-4 w-4" />
           Back
@@ -208,50 +221,52 @@ function SweepDetailPage() {
       </div>
 
       {/* Best Run Card */}
-      {sweep.best_run_id && sweep.best_value !== undefined && sweep.best_value !== null && (
-        <Card className="border-yellow-500/50 bg-yellow-500/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1">
-              <Trophy className="h-4 w-4 text-yellow-500" />
-              Best Run
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <a
-                  href={`/runs/${sweep.best_run_id}`}
-                  className="font-medium hover:underline"
-                >
-                  {runs.find((r) => r.id === sweep.best_run_id)?.name ||
-                    sweep.best_run_id}
-                </a>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {sweep.metric_name}: {sweep.best_value.toFixed(6)}
-                </p>
-              </div>
-              {runs.find((r) => r.id === sweep.best_run_id)?.config && (
-                <div className="text-sm text-right">
-                  {Object.entries(
-                    runs.find((r) => r.id === sweep.best_run_id)!.config!,
-                  )
-                    .slice(0, 3)
-                    .map(([key, value]) => (
-                      <div key={key} className="text-muted-foreground">
-                        {key}:{" "}
-                        <span className="font-mono">
-                          {typeof value === "number"
-                            ? (value as number).toPrecision(4)
-                            : String(value)}
-                        </span>
-                      </div>
-                    ))}
+      {sweep.best_run_id &&
+        sweep.best_value !== undefined &&
+        sweep.best_value !== null && (
+          <Card className="border-yellow-500/50 bg-yellow-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                <Trophy className="h-4 w-4 text-yellow-500" />
+                Best Run
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <a
+                    href={`/runs/${sweep.best_run_id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {runs.find((r) => r.id === sweep.best_run_id)?.name ||
+                      sweep.best_run_id}
+                  </a>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {sweep.metric_name}: {sweep.best_value.toFixed(6)}
+                  </p>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                {runs.find((r) => r.id === sweep.best_run_id)?.config && (
+                  <div className="text-sm text-right">
+                    {Object.entries(
+                      runs.find((r) => r.id === sweep.best_run_id)!.config!,
+                    )
+                      .slice(0, 3)
+                      .map(([key, value]) => (
+                        <div key={key} className="text-muted-foreground">
+                          {key}:{" "}
+                          <span className="font-mono">
+                            {typeof value === "number"
+                              ? (value as number).toPrecision(4)
+                              : String(value)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -348,8 +363,7 @@ function SweepDetailPage() {
                     (runsPage + 1) * RUNS_PER_PAGE,
                   )
                   .map((run) => {
-                    const metricValue =
-                      run.latest_metrics?.[sweep.metric_name];
+                    const metricValue = run.latest_metrics?.[sweep.metric_name];
                     const isBest = run.id === sweep.best_run_id;
 
                     return (
@@ -468,9 +482,7 @@ function SweepDetailPage() {
                   <div className="flex items-center gap-1">
                     <span className="text-xs text-muted-foreground">Y:</span>
                     <Button
-                      variant={
-                        yAxisScale === "linear" ? "secondary" : "ghost"
-                      }
+                      variant={yAxisScale === "linear" ? "secondary" : "ghost"}
                       size="sm"
                       className="h-6 px-2 text-xs"
                       onClick={() => setYAxisScale("linear")}
@@ -501,11 +513,7 @@ function SweepDetailPage() {
                 >
                   <TabsList className="flex-wrap h-auto gap-1 mb-4">
                     {metricNames.map((name) => (
-                      <TabsTrigger
-                        key={name}
-                        value={name}
-                        className="text-xs"
-                      >
+                      <TabsTrigger key={name} value={name} className="text-xs">
                         {name}
                       </TabsTrigger>
                     ))}
@@ -588,7 +596,9 @@ function SweepDetailPage() {
                               </g>
                             );
                           }
-                          return <circle cx={cx} cy={cy} r={6} fill="#2563eb" />;
+                          return (
+                            <circle cx={cx} cy={cy} r={6} fill="#2563eb" />
+                          );
                         }}
                       />
                     </ScatterChart>
@@ -628,9 +638,7 @@ function SweepDetailPage() {
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {param.type === "categorical"
-                            ? param.values
-                                ?.map((v) => String(v))
-                                .join(", ")
+                            ? param.values?.map((v) => String(v)).join(", ")
                             : `[${param.min}, ${param.max}]`}
                         </TableCell>
                       </TableRow>

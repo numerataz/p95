@@ -28,7 +28,10 @@ export interface SweepContext {
   project?: string;
 }
 
-export async function getSweep(sweepId: string, ctx?: SweepContext): Promise<Sweep> {
+export async function getSweep(
+  sweepId: string,
+  ctx?: SweepContext,
+): Promise<Sweep> {
   const params: Record<string, string> = {};
   if (ctx?.source === "remote" && ctx.team && ctx.project) {
     params.source = "remote";
@@ -39,7 +42,10 @@ export async function getSweep(sweepId: string, ctx?: SweepContext): Promise<Swe
   return response.data;
 }
 
-export async function getSweepRuns(sweepId: string, ctx?: SweepContext): Promise<Run[]> {
+export async function getSweepRuns(
+  sweepId: string,
+  ctx?: SweepContext,
+): Promise<Run[]> {
   const params: Record<string, string> = {};
   if (ctx?.source === "remote" && ctx.team && ctx.project) {
     params.source = "remote";
@@ -53,13 +59,20 @@ export async function getSweepRuns(sweepId: string, ctx?: SweepContext): Promise
   return response.data.runs;
 }
 
-export async function stopSweep(sweepId: string, ctx?: SweepContext): Promise<Sweep> {
+export async function stopSweep(
+  sweepId: string,
+  ctx?: SweepContext,
+): Promise<Sweep> {
   const params: Record<string, string> = {};
   if (ctx?.source === "remote" && ctx.team && ctx.project) {
     params.source = "remote";
     params.team = ctx.team;
     params.project = ctx.project;
   }
-  const response = await apiClient.post<Sweep>(`/sweeps/${sweepId}/stop`, undefined, { params });
+  const response = await apiClient.post<Sweep>(
+    `/sweeps/${sweepId}/stop`,
+    undefined,
+    { params },
+  );
   return response.data;
 }
