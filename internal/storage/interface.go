@@ -33,6 +33,13 @@ type Storage interface {
 	GetLatestMetrics(ctx context.Context, runID string) (map[string]float64, error)
 	GetMetricsSummary(ctx context.Context, runID string) (*MetricsSummary, error)
 
+	// Sweeps
+	ListSweeps(ctx context.Context, project string) ([]domain.Sweep, error)
+	GetSweep(ctx context.Context, project, sweepID string) (*domain.Sweep, error)
+	GetSweepByID(ctx context.Context, sweepID string) (*domain.Sweep, string, error)
+	GetSweepRuns(ctx context.Context, project, sweepID string) ([]*domain.Run, error)
+	StopSweep(ctx context.Context, project, sweepID string) error
+
 	// Health check
 	Health(ctx context.Context) error
 

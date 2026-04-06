@@ -174,6 +174,57 @@ export interface MetricsSummaryResponse {
   metrics: MetricSummary[];
 }
 
+// Sweep types
+export type SweepStatus = "running" | "completed" | "failed" | "stopped";
+export type SearchMethod = "random" | "grid";
+export type MetricGoal = "minimize" | "maximize";
+
+export interface ParameterSpec {
+  name: string;
+  type: "uniform" | "log_uniform" | "int" | "categorical";
+  min?: number;
+  max?: number;
+  values?: unknown[];
+}
+
+export interface SearchSpace {
+  parameters: ParameterSpec[];
+}
+
+export interface EarlyStoppingConfig {
+  method: string;
+  min_steps: number;
+  warmup: number;
+}
+
+export interface Sweep {
+  id: string;
+  name: string;
+  status: SweepStatus;
+  method: SearchMethod;
+  metric_name: string;
+  metric_goal: MetricGoal;
+  search_space: SearchSpace;
+  config?: Record<string, unknown>;
+  max_runs?: number;
+  early_stopping?: EarlyStoppingConfig;
+  best_run_id?: string;
+  best_value?: number;
+  run_count: number;
+  grid_index: number;
+  started_at: string;
+  ended_at?: string;
+  created_at: string;
+}
+
+export interface SweepFilters {
+  status?: SweepStatus;
+  limit?: number;
+  offset?: number;
+  order_by?: "started_at" | "name" | "status";
+  order_dir?: "asc" | "desc";
+}
+
 // API Key types
 export type APIKeyScope = "read" | "write" | "admin";
 

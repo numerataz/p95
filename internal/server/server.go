@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -20,6 +21,7 @@ import (
 	"github.com/ninetyfive/p95/internal/domain"
 	"github.com/ninetyfive/p95/internal/storage"
 	"github.com/ninetyfive/p95/internal/storage/file"
+	"github.com/ninetyfive/p95/pkg/client"
 )
 
 // Server represents the local HTTP server.
@@ -29,18 +31,36 @@ type Server struct {
 	server    *http.Server
 	webFS     fs.FS
 	activeRun string // Currently active run ID for UI navigation
+
+	remoteClient *client.Client // nil when no remote configured
+
+	mu           sync.RWMutex
+	runSources   map[string]string            // runID → "local" | "remote"
+	sweepSources map[string]sweepSourceEntry  // sweepID → source info
+}
+
+type sweepSourceEntry struct {
+	source    string // "remote"
+	teamSlug  string
+	appSlug   string
 }
 
 // New creates a new local server instance.
-func New(logdir string, webFS fs.FS) (*Server, error) {
+func New(logdir string, webFS fs.FS, remoteURL string, remoteAPIKey string) (*Server, error) {
 	store, err := file.New(logdir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create storage: %w", err)
 	}
 
 	s := &Server{
-		storage: store,
-		webFS:   webFS,
+		storage:      store,
+		webFS:        webFS,
+		runSources:   make(map[string]string),
+		sweepSources: make(map[string]sweepSourceEntry),
+	}
+
+	if remoteURL != "" {
+		s.remoteClient = client.NewWithAPIKey(remoteURL, remoteAPIKey)
 	}
 
 	s.setupRouter()
@@ -75,7 +95,7 @@ func (s *Server) setupRouter() {
 		// Config endpoint - tells frontend we're in local mode
 		r.Get("/config", s.getConfig)
 
-		// Projects (local mode concept)
+		// Projects (local mode concept, extended to include remote)
 		r.Get("/projects", s.listProjects)
 		r.Get("/projects/{projectSlug}/runs", s.listRuns)
 
@@ -83,6 +103,12 @@ func (s *Server) setupRouter() {
 		r.Get("/teams", s.listTeams)
 		r.Get("/teams/{teamSlug}/apps", s.listApps)
 		r.Get("/teams/{teamSlug}/apps/{appSlug}/runs", s.listAppRuns)
+
+		// Sweeps
+		r.Get("/projects/{projectSlug}/sweeps", s.listSweeps)
+		r.Get("/sweeps/{sweepID}", s.getSweep)
+		r.Get("/sweeps/{sweepID}/runs", s.getSweepRuns)
+		r.Post("/sweeps/{sweepID}/stop", s.stopSweep)
 
 		// Active run (for UI auto-navigation)
 		r.Get("/active-run", s.getActiveRun)
@@ -137,6 +163,46 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+// isRemoteRun returns true if the run with the given ID is known to be remote.
+func (s *Server) isRemoteRun(runID string) bool {
+	if s.remoteClient == nil {
+		return false
+	}
+	s.mu.RLock()
+	src, ok := s.runSources[runID]
+	s.mu.RUnlock()
+	return ok && src == "remote"
+}
+
+// proxyRemote fetches a path from the remote API and writes it directly to w.
+func (s *Server) proxyRemote(w http.ResponseWriter, path string) {
+	data, err := s.remoteClient.RawGet(path)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "Failed to fetch from remote")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
+}
+
+// cacheRunSource records the source for a set of run IDs extracted from a JSON array.
+func (s *Server) cacheRemoteRunIDs(data []byte) {
+	var runs []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(data, &runs); err != nil {
+		return
+	}
+	s.mu.Lock()
+	for _, r := range runs {
+		if r.ID != "" {
+			s.runSources[r.ID] = "remote"
+		}
+	}
+	s.mu.Unlock()
+}
+
 // Handler functions
 
 func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
@@ -150,9 +216,10 @@ func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
 	config := map[string]any{
-		"mode":    "local",
-		"version": "0.1.0",
-		"logdir":  s.storage.LogDir(),
+		"mode":      "local",
+		"version":   "0.1.0",
+		"logdir":    s.storage.LogDir(),
+		"hasRemote": s.remoteClient != nil,
 		"features": map[string]bool{
 			"auth":     false,
 			"teams":    false,
@@ -184,10 +251,40 @@ func (s *Server) setActiveRun(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := s.storage.ListProjects(r.Context())
+	localProjects, err := s.storage.ListProjects(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to list projects")
 		return
+	}
+
+	// Convert to a mutable map slice so we can add source field
+	localJSON, _ := json.Marshal(localProjects)
+	var projects []map[string]any
+	json.Unmarshal(localJSON, &projects)
+	for i := range projects {
+		projects[i]["source"] = "local"
+	}
+
+	// Append remote projects if configured
+	if s.remoteClient != nil {
+		teams, err := s.remoteClient.GetTeams()
+		if err == nil {
+			for _, t := range teams {
+				apps, appErr := s.remoteClient.GetApps(t.Slug)
+				if appErr != nil {
+					continue
+				}
+				for _, a := range apps {
+					projects = append(projects, map[string]any{
+						"slug":      a.Slug,
+						"name":      a.Name,
+						"run_count": a.RunCount,
+						"source":    "remote",
+						"team_slug": t.Slug,
+					})
+				}
+			}
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -252,6 +349,23 @@ func (s *Server) listAppRuns(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 	projectSlug := chi.URLParam(r, "projectSlug")
+	source := r.URL.Query().Get("source")
+	team := r.URL.Query().Get("team")
+
+	// Route to remote if requested
+	if source == "remote" && s.remoteClient != nil && team != "" {
+		path := fmt.Sprintf("/api/v1/teams/%s/apps/%s/runs", team, projectSlug)
+		data, err := s.remoteClient.RawGet(path)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "Failed to fetch remote runs")
+			return
+		}
+		s.cacheRemoteRunIDs(data)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
 
 	opts := domain.RunListOptions{
 		Limit:    100,
@@ -259,8 +373,8 @@ func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 		OrderDir: r.URL.Query().Get("order_dir"),
 	}
 
-	if status := r.URL.Query().Get("status"); status != "" {
-		s := domain.RunStatus(status)
+	if st := r.URL.Query().Get("status"); st != "" {
+		s := domain.RunStatus(st)
 		opts.Status = &s
 	}
 
@@ -270,14 +384,40 @@ func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cache local run IDs
+	s.mu.Lock()
+	for _, run := range runs {
+		s.runSources[run.ID.String()] = "local"
+	}
+	s.mu.Unlock()
+
 	writeJSON(w, http.StatusOK, runs)
 }
 
 func (s *Server) getRun(w http.ResponseWriter, r *http.Request) {
 	runID := chi.URLParam(r, "runID")
 
+	if s.isRemoteRun(runID) {
+		s.proxyRemote(w, fmt.Sprintf("/api/v1/runs/%s", runID))
+		return
+	}
+
 	run, err := s.storage.GetRun(r.Context(), runID)
 	if err != nil {
+		// Try remote as fallback if not in cache yet
+		if s.remoteClient != nil {
+			path := fmt.Sprintf("/api/v1/runs/%s", runID)
+			data, remoteErr := s.remoteClient.RawGet(path)
+			if remoteErr == nil {
+				s.mu.Lock()
+				s.runSources[runID] = "remote"
+				s.mu.Unlock()
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write(data)
+				return
+			}
+		}
 		writeError(w, http.StatusNotFound, "Run not found")
 		return
 	}
@@ -287,6 +427,11 @@ func (s *Server) getRun(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getMetricNames(w http.ResponseWriter, r *http.Request) {
 	runID := chi.URLParam(r, "runID")
+
+	if s.isRemoteRun(runID) {
+		s.proxyRemote(w, fmt.Sprintf("/api/v1/runs/%s/metrics", runID))
+		return
+	}
 
 	names, err := s.storage.GetMetricNames(r.Context(), runID)
 	if err != nil {
@@ -302,6 +447,11 @@ func (s *Server) getMetricNames(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getLatestMetrics(w http.ResponseWriter, r *http.Request) {
 	runID := chi.URLParam(r, "runID")
 
+	if s.isRemoteRun(runID) {
+		s.proxyRemote(w, fmt.Sprintf("/api/v1/runs/%s/metrics/latest", runID))
+		return
+	}
+
 	latest, err := s.storage.GetLatestMetrics(r.Context(), runID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to get latest metrics")
@@ -313,6 +463,11 @@ func (s *Server) getLatestMetrics(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getMetricsSummary(w http.ResponseWriter, r *http.Request) {
 	runID := chi.URLParam(r, "runID")
+
+	if s.isRemoteRun(runID) {
+		s.proxyRemote(w, fmt.Sprintf("/api/v1/runs/%s/metrics/summary", runID))
+		return
+	}
 
 	summary, err := s.storage.GetMetricsSummary(r.Context(), runID)
 	if err != nil {
@@ -330,6 +485,16 @@ func (s *Server) getMetricSeries(w http.ResponseWriter, r *http.Request) {
 	// URL-decode the metric name since chi doesn't do this automatically
 	// This allows metric names like "train/loss" to be passed as "train%2Floss"
 	metricName, _ := url.PathUnescape(metricNameRaw)
+
+	if s.isRemoteRun(runID) {
+		path := fmt.Sprintf("/api/v1/runs/%s/metrics/%s", runID, url.PathEscape(metricName))
+		// Forward query params (max_points, min_step, max_step, etc.)
+		if r.URL.RawQuery != "" {
+			path += "?" + r.URL.RawQuery
+		}
+		s.proxyRemote(w, path)
+		return
+	}
 
 	opts := storage.MetricQueryOptions{
 		MaxPoints: 1000, // Default max points
@@ -390,6 +555,11 @@ func (s *Server) getMetricSeries(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getContinuations(w http.ResponseWriter, r *http.Request) {
 	runID := chi.URLParam(r, "runID")
 
+	if s.isRemoteRun(runID) {
+		s.proxyRemote(w, fmt.Sprintf("/api/v1/runs/%s/continuations", runID))
+		return
+	}
+
 	continuations, err := s.storage.GetContinuations(r.Context(), runID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -406,6 +576,192 @@ func (s *Server) getContinuations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"continuations": continuations})
+}
+
+func (s *Server) listSweeps(w http.ResponseWriter, r *http.Request) {
+	projectSlug := chi.URLParam(r, "projectSlug")
+	source := r.URL.Query().Get("source")
+	team := r.URL.Query().Get("team")
+
+	if source == "remote" && s.remoteClient != nil && team != "" {
+		path := fmt.Sprintf("/api/v1/teams/%s/apps/%s/sweeps", team, projectSlug)
+		data, err := s.remoteClient.RawGet(path)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "Failed to fetch remote sweeps")
+			return
+		}
+		s.cacheRemoteSweepIDs(data, team, projectSlug)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+
+	sweeps, err := s.storage.ListSweeps(r.Context(), projectSlug)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to list sweeps")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sweeps)
+}
+
+func (s *Server) getSweep(w http.ResponseWriter, r *http.Request) {
+	sweepID := chi.URLParam(r, "sweepID")
+	source := r.URL.Query().Get("source")
+	team := r.URL.Query().Get("team")
+	project := r.URL.Query().Get("project")
+
+	// Check cache, then fall back to query params for remote sweeps
+	if s.isRemoteSweep(sweepID) {
+		entry := s.getRemoteSweepEntry(sweepID)
+		path := fmt.Sprintf("/api/v1/teams/%s/apps/%s/sweeps/%s", entry.teamSlug, entry.appSlug, sweepID)
+		s.proxyRemote(w, path)
+		return
+	}
+	if source == "remote" && s.remoteClient != nil && team != "" && project != "" {
+		s.mu.Lock()
+		s.sweepSources[sweepID] = sweepSourceEntry{source: "remote", teamSlug: team, appSlug: project}
+		s.mu.Unlock()
+		path := fmt.Sprintf("/api/v1/teams/%s/apps/%s/sweeps/%s", team, project, sweepID)
+		s.proxyRemote(w, path)
+		return
+	}
+
+	sweep, _, err := s.storage.GetSweepByID(r.Context(), sweepID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "Sweep not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sweep)
+}
+
+func (s *Server) getSweepRuns(w http.ResponseWriter, r *http.Request) {
+	sweepID := chi.URLParam(r, "sweepID")
+	source := r.URL.Query().Get("source")
+	team := r.URL.Query().Get("team")
+	project := r.URL.Query().Get("project")
+
+	if s.isRemoteSweep(sweepID) {
+		path := fmt.Sprintf("/api/v1/sweeps/%s/runs", sweepID)
+		s.proxyRemote(w, path)
+		return
+	}
+	if source == "remote" && s.remoteClient != nil && team != "" && project != "" {
+		path := fmt.Sprintf("/api/v1/sweeps/%s/runs", sweepID)
+		s.proxyRemote(w, path)
+		return
+	}
+
+	_, proj, err := s.storage.GetSweepByID(r.Context(), sweepID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "Sweep not found")
+		return
+	}
+
+	runs, err := s.storage.GetSweepRuns(r.Context(), proj, sweepID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to get sweep runs")
+		return
+	}
+
+	if runs == nil {
+		runs = []*domain.Run{}
+	}
+
+	// Cache local run IDs
+	s.mu.Lock()
+	for _, run := range runs {
+		s.runSources[run.ID.String()] = "local"
+	}
+	s.mu.Unlock()
+
+	writeJSON(w, http.StatusOK, map[string]any{"runs": runs})
+}
+
+func (s *Server) stopSweep(w http.ResponseWriter, r *http.Request) {
+	sweepID := chi.URLParam(r, "sweepID")
+	source := r.URL.Query().Get("source")
+	team := r.URL.Query().Get("team")
+	project := r.URL.Query().Get("project")
+
+	if s.isRemoteSweep(sweepID) {
+		entry := s.getRemoteSweepEntry(sweepID)
+		path := fmt.Sprintf("/api/v1/teams/%s/apps/%s/sweeps/%s/stop", entry.teamSlug, entry.appSlug, sweepID)
+		data, err := s.remoteClient.RawPost(path, nil)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "Failed to stop remote sweep")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+	if source == "remote" && s.remoteClient != nil && team != "" && project != "" {
+		path := fmt.Sprintf("/api/v1/teams/%s/apps/%s/sweeps/%s/stop", team, project, sweepID)
+		data, err := s.remoteClient.RawPost(path, nil)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, "Failed to stop remote sweep")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+
+	sweep, proj, err := s.storage.GetSweepByID(r.Context(), sweepID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "Sweep not found")
+		return
+	}
+
+	if err := s.storage.StopSweep(r.Context(), proj, sweepID); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to stop sweep")
+		return
+	}
+
+	sweep.Status = "stopped"
+	writeJSON(w, http.StatusOK, sweep)
+}
+
+func (s *Server) isRemoteSweep(sweepID string) bool {
+	if s.remoteClient == nil {
+		return false
+	}
+	s.mu.RLock()
+	entry, ok := s.sweepSources[sweepID]
+	s.mu.RUnlock()
+	return ok && entry.source == "remote"
+}
+
+func (s *Server) getRemoteSweepEntry(sweepID string) sweepSourceEntry {
+	s.mu.RLock()
+	entry := s.sweepSources[sweepID]
+	s.mu.RUnlock()
+	return entry
+}
+
+func (s *Server) cacheRemoteSweepIDs(data []byte, teamSlug, appSlug string) {
+	var sweeps []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(data, &sweeps); err != nil {
+		return
+	}
+	s.mu.Lock()
+	for _, sw := range sweeps {
+		if sw.ID != "" {
+			s.sweepSources[sw.ID] = sweepSourceEntry{
+				source:   "remote",
+				teamSlug: teamSlug,
+				appSlug:  appSlug,
+			}
+		}
+	}
+	s.mu.Unlock()
 }
 
 func (s *Server) serveWebUI(w http.ResponseWriter, r *http.Request) {

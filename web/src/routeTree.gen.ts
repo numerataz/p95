@@ -9,13 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SweepsRouteImport } from './routes/sweeps'
 import { Route as RunsRouteImport } from './routes/runs'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
+import { Route as SweepsSweepIdRouteImport } from './routes/sweeps/$sweepId'
 import { Route as RunsRunIdRouteImport } from './routes/runs/$runId'
 import { Route as ProjectsProjectSlugRouteImport } from './routes/projects/$projectSlug'
 
+const SweepsRoute = SweepsRouteImport.update({
+  id: '/sweeps',
+  path: '/sweeps',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RunsRoute = RunsRouteImport.update({
   id: '/runs',
   path: '/runs',
@@ -36,6 +43,11 @@ const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const SweepsSweepIdRoute = SweepsSweepIdRouteImport.update({
+  id: '/$sweepId',
+  path: '/$sweepId',
+  getParentRoute: () => SweepsRoute,
+} as any)
 const RunsRunIdRoute = RunsRunIdRouteImport.update({
   id: '/$runId',
   path: '/$runId',
@@ -51,15 +63,19 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/runs': typeof RunsRouteWithChildren
+  '/sweeps': typeof SweepsRouteWithChildren
   '/projects/$projectSlug': typeof ProjectsProjectSlugRoute
   '/runs/$runId': typeof RunsRunIdRoute
+  '/sweeps/$sweepId': typeof SweepsSweepIdRoute
   '/projects/': typeof ProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/runs': typeof RunsRouteWithChildren
+  '/sweeps': typeof SweepsRouteWithChildren
   '/projects/$projectSlug': typeof ProjectsProjectSlugRoute
   '/runs/$runId': typeof RunsRunIdRoute
+  '/sweeps/$sweepId': typeof SweepsSweepIdRoute
   '/projects': typeof ProjectsIndexRoute
 }
 export interface FileRoutesById {
@@ -67,8 +83,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/runs': typeof RunsRouteWithChildren
+  '/sweeps': typeof SweepsRouteWithChildren
   '/projects/$projectSlug': typeof ProjectsProjectSlugRoute
   '/runs/$runId': typeof RunsRunIdRoute
+  '/sweeps/$sweepId': typeof SweepsSweepIdRoute
   '/projects/': typeof ProjectsIndexRoute
 }
 export interface FileRouteTypes {
@@ -77,18 +95,29 @@ export interface FileRouteTypes {
     | '/'
     | '/projects'
     | '/runs'
+    | '/sweeps'
     | '/projects/$projectSlug'
     | '/runs/$runId'
+    | '/sweeps/$sweepId'
     | '/projects/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/runs' | '/projects/$projectSlug' | '/runs/$runId' | '/projects'
+  to:
+    | '/'
+    | '/runs'
+    | '/sweeps'
+    | '/projects/$projectSlug'
+    | '/runs/$runId'
+    | '/sweeps/$sweepId'
+    | '/projects'
   id:
     | '__root__'
     | '/'
     | '/projects'
     | '/runs'
+    | '/sweeps'
     | '/projects/$projectSlug'
     | '/runs/$runId'
+    | '/sweeps/$sweepId'
     | '/projects/'
   fileRoutesById: FileRoutesById
 }
@@ -96,10 +125,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
   RunsRoute: typeof RunsRouteWithChildren
+  SweepsRoute: typeof SweepsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sweeps': {
+      id: '/sweeps'
+      path: '/sweeps'
+      fullPath: '/sweeps'
+      preLoaderRoute: typeof SweepsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/runs': {
       id: '/runs'
       path: '/runs'
@@ -127,6 +164,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/'
       preLoaderRoute: typeof ProjectsIndexRouteImport
       parentRoute: typeof ProjectsRoute
+    }
+    '/sweeps/$sweepId': {
+      id: '/sweeps/$sweepId'
+      path: '/$sweepId'
+      fullPath: '/sweeps/$sweepId'
+      preLoaderRoute: typeof SweepsSweepIdRouteImport
+      parentRoute: typeof SweepsRoute
     }
     '/runs/$runId': {
       id: '/runs/$runId'
@@ -169,10 +213,22 @@ const RunsRouteChildren: RunsRouteChildren = {
 
 const RunsRouteWithChildren = RunsRoute._addFileChildren(RunsRouteChildren)
 
+interface SweepsRouteChildren {
+  SweepsSweepIdRoute: typeof SweepsSweepIdRoute
+}
+
+const SweepsRouteChildren: SweepsRouteChildren = {
+  SweepsSweepIdRoute: SweepsSweepIdRoute,
+}
+
+const SweepsRouteWithChildren =
+  SweepsRoute._addFileChildren(SweepsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
   RunsRoute: RunsRouteWithChildren,
+  SweepsRoute: SweepsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

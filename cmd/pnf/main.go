@@ -367,7 +367,7 @@ func tuiCmd(args []string) {
 	listener.Close()
 
 	// Start local server in background, with web UI so 'o' can open it in a browser
-	srv, err := server.New(*logdir, web.DistFS())
+	srv, err := server.New(*logdir, web.DistFS(), "", "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating server: %v\n", err)
 		os.Exit(1)
@@ -420,7 +420,16 @@ func serveCmd(args []string) {
 	port := fs.Int("port", 6767, "Port to listen on")
 	host := fs.String("host", "localhost", "Host to bind to")
 	openBrowser := fs.Bool("open", true, "Open browser automatically")
+	remoteURL := fs.String("url", "", "Remote API base URL (fallback: P95_URL)")
+	apiKey := fs.String("api-key", "", "Remote API key (fallback: P95_API_KEY)")
 	fs.Parse(args)
+
+	if *remoteURL == "" {
+		*remoteURL = os.Getenv("P95_URL")
+	}
+	if *apiKey == "" {
+		*apiKey = os.Getenv("P95_API_KEY")
+	}
 
 	if *logdir == "" {
 		*logdir = defaultLogDir()
@@ -436,7 +445,7 @@ func serveCmd(args []string) {
 	webFS := web.DistFS()
 
 	// Create server
-	srv, err := server.New(*logdir, webFS)
+	srv, err := server.New(*logdir, webFS, *remoteURL, *apiKey)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
