@@ -50,6 +50,8 @@ func main() {
 		fmt.Println("pnf v0.1.0")
 	case "help", "--help", "-h":
 		printUsage()
+	case "runs", "run", "jobs", "workers", "worker":
+		delegateToP95()
 	default:
 		// If first arg looks like a flag, assume serve command
 		if strings.HasPrefix(cmd, "-") {
@@ -69,10 +71,13 @@ Usage:
   pnf <command> [options]
 
 Commands:
-  tui     Interactive terminal UI with charts
-  ls      List projects and runs
-  show    Show metrics for a run
-  serve   Start the web viewer
+  tui      Interactive terminal UI with charts
+  ls       List projects and runs
+  show     Show metrics for a run
+  serve    Start the web viewer
+  runs     Manage cloud runs
+  jobs     Manage cloud jobs
+  workers  Manage cloud workers
 
 Examples:
   pnf tui --logdir ./logs
@@ -81,12 +86,26 @@ Examples:
   pnf ls --logdir ./logs --project demo-project
   pnf show <run-id> --logdir ./logs
   pnf serve --logdir ./logs
+  pnf runs list --project team/app
+  pnf jobs create --project team/app --script train.py
 
 Options:
   --logdir    Directory containing logs (default: ~/.p95/logs)
   --url       Remote API base URL (tui command; fallback: P95_URL)
   --api-key   Remote API key (tui command; fallback: P95_API_KEY)
   --help      Show this help message`)
+}
+
+func delegateToP95() {
+	p95, err := exec.LookPath("p95")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cloud commands require the p95 Python package.\nInstall it with: pip install p95\n")
+		os.Exit(1)
+	}
+	if err := syscall.Exec(p95, append([]string{p95}, os.Args[1:]...), os.Environ()); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 // ============================================
