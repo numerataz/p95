@@ -55,7 +55,9 @@ def main():
                 step=epoch,
             )
 
-            print(f"Epoch {epoch + 1}/{config['epochs']}  loss={loss:.4f}  acc={accuracy:.4f}")
+            print(
+                f"Epoch {epoch + 1}/{config['epochs']}  loss={loss:.4f}  acc={accuracy:.4f}"
+            )
             time.sleep(0.1)
 
 
