@@ -71,6 +71,8 @@ class Run:
         # Server option (local mode only)
         start_server: bool = False,
         start_tui: bool = False,
+        # Sharing option (remote mode only)
+        share: bool = False,
     ):
         """
         Initialize a new run.
@@ -93,6 +95,9 @@ class Run:
                 browser (local mode only). The server stops when the run ends.
             start_tui: Automatically open the p95 TUI in a new terminal window
                 (local mode only). The TUI manages its own internal server.
+            share: Automatically create a public share link when the run finishes
+                (remote mode only). The link is printed to stdout in the form
+                https://p95.run/{slug}.
 
         Raises:
             ValidationError: If project format is invalid (remote mode)
@@ -137,6 +142,7 @@ class Run:
         self._server_manager: Optional["ServerManager"] = None
         self._start_server = start_server
         self._start_tui = start_tui
+        self._share = share
 
         # Capture info before creating run
         self._git_info = None
@@ -522,12 +528,22 @@ class Run:
             # Launch TUI after the script fully exits
             if self._server_manager is not None and self._start_tui:
                 atexit.register(self._server_manager.start)
+            if self._share:
+                print("p95: Warning: share=True is only available in remote mode.")
         else:
             # Flush and stop remote batcher
             self._remote_batcher.flush()
             self._remote_batcher.stop()
             # Update status on server
             self._remote_client.update_run_status(self._run_id, status, error=error)
+            if self._share:
+                try:
+                    share_response = self._remote_client.share_run(self._run_id)
+                    slug = share_response.get("slug")
+                    if slug:
+                        print(f"p95: Share your run at https://p95.run/{slug}")
+                except Exception as e:
+                    print(f"p95: Warning: Failed to create share link: {e}")
 
     def __enter__(self) -> "Run":
         """Enter context manager."""

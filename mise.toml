@@ -81,6 +81,11 @@ depends = ["build-release"]
 env = { P95_LOGDIR = "./logs", P95_BINARY = "./bin/pnf" }
 run = "python examples/multi_stage_training.py"
 
+[tasks.demo-share]
+description = "Run shared run example (remote mode, prints public share link on completion)"
+depends = ["build-sdk"]
+run = "python examples/share_run.py"
+
 # ===================
 # Development tasks
 # ===================
