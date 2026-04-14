@@ -31,7 +31,7 @@ class SDKConfig:
     mode: Literal["local", "remote"] = "local"
 
     # Remote mode settings
-    base_url: str = "http://localhost:8080"
+    base_url: str = "https://p.ninetyfive.gg"
     api_key: Optional[str] = None
 
     # Local mode settings
@@ -145,7 +145,7 @@ def _detect_mode() -> Literal["local", "remote"]:
     """
     if os.environ.get("P95_LOGDIR"):
         return "local"
-    if os.environ.get("P95_URL") or os.environ.get("P95_API_KEY"):
+    if os.environ.get("P95_API_KEY"):
         return "remote"
     return "local"
 
