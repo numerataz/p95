@@ -28,7 +28,7 @@ def _get_client() -> P95Client:
             _error("P95_API_KEY environment variable is required")
         config.api_key = api_key
     if not config.base_url:
-        config.base_url = os.environ.get("P95_URL", "https://api.p95.dev")
+        config.base_url = os.environ.get("P95_URL", "https://p.ninetyfive.gg")
     return P95Client(config)
 
 
