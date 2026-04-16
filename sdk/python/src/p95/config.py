@@ -1,9 +1,39 @@
 """Configuration management for the p95 SDK."""
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Optional, Set
+from typing import Any, Dict, Literal, Optional, Set
+
+
+def _credentials_path() -> Path:
+    """Get the platform-specific credentials file path (mirrors the Go CLI)."""
+    import platform
+
+    home = Path.home()
+    system = platform.system()
+
+    if system == "Darwin":
+        config_dir = home / "Library" / "Application Support" / "p95"
+    elif system == "Windows":
+        appdata = os.environ.get("APPDATA", str(home / "AppData" / "Roaming"))
+        config_dir = Path(appdata) / "p95"
+    else:
+        xdg_config = os.environ.get("XDG_CONFIG_HOME", str(home / ".config"))
+        config_dir = Path(xdg_config) / "p95"
+
+    return config_dir / "credentials.json"
+
+
+def _load_credentials() -> Dict[str, Any]:
+    """Load credentials from the file written by `pnf cloud login`. Returns {} if not found."""
+    path = _credentials_path()
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
 def _default_logdir() -> str:
@@ -33,6 +63,7 @@ class SDKConfig:
     # Remote mode settings
     base_url: str = "https://p.ninetyfive.gg"
     api_key: Optional[str] = None
+    default_team: Optional[str] = None
 
     # Local mode settings
     logdir: str = field(default_factory=_default_logdir)
@@ -136,16 +167,19 @@ def configure(
 
 def _detect_mode() -> Literal["local", "remote"]:
     """
-    Auto-detect the operating mode based on environment variables.
+    Auto-detect the operating mode based on environment variables and credentials file.
 
     Priority:
     1. P95_LOGDIR set -> local mode
     2. P95_URL or P95_API_KEY set -> remote mode
-    3. Default -> local mode (zero config experience)
+    3. Credentials file has api_key -> remote mode
+    4. Default -> local mode (zero config experience)
     """
     if os.environ.get("P95_LOGDIR"):
         return "local"
     if os.environ.get("P95_API_KEY"):
+        return "remote"
+    if _load_credentials().get("api_key"):
         return "remote"
     return "local"
 
@@ -166,5 +200,19 @@ def get_config() -> SDKConfig:
         _config.base_url = os.environ["P95_URL"]
     if "api_key" not in _explicitly_set and os.environ.get("P95_API_KEY"):
         _config.api_key = os.environ["P95_API_KEY"]
+
+    # Fall back to credentials file for any values still unset
+    if "api_key" not in _explicitly_set and not _config.api_key:
+        creds = _load_credentials()
+        if creds.get("api_key"):
+            _config.api_key = creds["api_key"]
+        if (
+            "base_url" not in _explicitly_set
+            and not os.environ.get("P95_URL")
+            and creds.get("url")
+        ):
+            _config.base_url = creds["url"]
+        if creds.get("default_team"):
+            _config.default_team = creds["default_team"]
 
     return _config
