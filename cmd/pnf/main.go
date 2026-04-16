@@ -50,6 +50,8 @@ func main() {
 		fmt.Println("pnf v0.1.0")
 	case "help", "--help", "-h":
 		printUsage()
+	case "cloud":
+		cloudCmd(os.Args[2:])
 	case "runs", "run", "jobs", "workers", "worker":
 		delegateToP95()
 	default:
@@ -75,6 +77,7 @@ Commands:
   ls       List projects and runs
   show     Show metrics for a run
   serve    Start the web viewer
+  cloud    Manage cloud authentication
   runs     Manage cloud runs
   jobs     Manage cloud jobs
   workers  Manage cloud workers
@@ -86,6 +89,9 @@ Examples:
   pnf ls --logdir ./logs --project demo-project
   pnf show <run-id> --logdir ./logs
   pnf serve --logdir ./logs
+  pnf cloud login
+  pnf cloud login --url https://your-cloud-url
+  pnf cloud status
   pnf runs list --project team/app
   pnf jobs create --project team/app --script train.py
 
