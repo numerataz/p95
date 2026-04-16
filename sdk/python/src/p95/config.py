@@ -206,7 +206,11 @@ def get_config() -> SDKConfig:
         creds = _load_credentials()
         if creds.get("api_key"):
             _config.api_key = creds["api_key"]
-        if "base_url" not in _explicitly_set and not os.environ.get("P95_URL") and creds.get("url"):
+        if (
+            "base_url" not in _explicitly_set
+            and not os.environ.get("P95_URL")
+            and creds.get("url")
+        ):
             _config.base_url = creds["url"]
         if creds.get("default_team"):
             _config.default_team = creds["default_team"]
