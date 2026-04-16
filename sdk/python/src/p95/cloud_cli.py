@@ -16,19 +16,19 @@ import tempfile
 from typing import Any, Dict, Optional
 
 from p95.client import P95Client
-from p95.config import get_config
+from p95.config import get_config, _load_credentials
 
 
 def _get_client() -> P95Client:
     """Get a configured P95 cloud client."""
     config = get_config()
     if not config.api_key:
-        api_key = os.environ.get("P95_API_KEY")
-        if not api_key:
-            _error("P95_API_KEY environment variable is required")
-        config.api_key = api_key
-    if not config.base_url:
-        config.base_url = os.environ.get("P95_URL", "https://p.ninetyfive.gg")
+        creds = _load_credentials()
+        config.api_key = os.environ.get("P95_API_KEY") or creds.get("api_key")
+        if not config.api_key:
+            _error("No API key found. Run 'pnf cloud login' or set P95_API_KEY.")
+        if not os.environ.get("P95_URL") and creds.get("url"):
+            config.base_url = creds["url"]
     return P95Client(config)
 
 
