@@ -417,7 +417,7 @@ func tuiCmd(args []string) {
 	// Determine which dashboard to open with 'o'
 	dashboardURL := fmt.Sprintf("http://127.0.0.1:%d", port)
 	if *apiKey != "" {
-		dashboardURL = "https://p.ninetyfive.gg"
+		dashboardURL = "https://api.p.ninetyfive.gg"
 	}
 
 	// Create and run TUI

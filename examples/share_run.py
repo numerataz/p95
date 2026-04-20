@@ -7,7 +7,7 @@ after the run completes. Anyone with the link can view the run without
 needing an account.
 
 Usage:
-    export P95_URL=https://p.ninetyfive.gg
+    export P95_URL=https://api.p.ninetyfive.gg
     export P95_API_KEY=ss67_your_key_here
 
     python examples/share_run.py
@@ -21,7 +21,7 @@ import time
 from p95 import Run, configure
 
 configure(
-    base_url=os.environ.get("P95_URL", "https://p.ninetyfive.gg"),
+    base_url=os.environ.get("P95_URL", "https://api.p.ninetyfive.gg"),
 )
 
 

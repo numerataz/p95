@@ -117,7 +117,7 @@ description = "Run API + web UI dev server with local and cloud runs"
 depends = ["build-go"]
 run = """
 # Start API server in background with remote cloud config
-./bin/pnf serve --logdir {{option(name="logdir", default="./logs")}} --port 6767 --open=false --url {{option(name="url", default="https://p.ninetyfive.gg")}} --api-key {{option(name="api-key", default="ss67_GuRMyZWyzbRVwtcPc91XcTCyw-n_GKVFCYB-XJa_3cQ=")}} &
+./bin/pnf serve --logdir {{option(name="logdir", default="./logs")}} --port 6767 --open=false --url {{option(name="url", default="https://api.p.ninetyfive.gg")}} --api-key {{option(name="api-key", default="ss67_GuRMyZWyzbRVwtcPc91XcTCyw-n_GKVFCYB-XJa_3cQ=")}} &
 API_PID=$!
 
 # Start web dev server (connects to API on :6767)

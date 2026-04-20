@@ -48,7 +48,7 @@ run.add_tags(["baseline"])                                     # Add tags
 | ------------- | ------------------ | ------------------------- |
 | `P95_LOGDIR`  | Where to save logs | `~/.p95/logs`             |
 | `P95_API_KEY` | p95 cloud API Key  | none                      |
-| `P95_URL`     | p95 cloud URL      | `https://p.ninetyfive.gg` |
+| `P95_URL`     | p95 cloud URL      | `https://api.p.ninetyfive.gg` |
 
 ## License
 

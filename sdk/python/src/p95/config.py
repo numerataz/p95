@@ -61,7 +61,7 @@ class SDKConfig:
     mode: Literal["local", "remote"] = "local"
 
     # Remote mode settings
-    base_url: str = "https://p.ninetyfive.gg"
+    base_url: str = "https://api.p.ninetyfive.gg"
     api_key: Optional[str] = None
     default_team: Optional[str] = None
 

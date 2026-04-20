@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const defaultCloudURL = "https://p.ninetyfive.gg"
+const defaultCloudURL = "https://api.p.ninetyfive.gg"
 
 type cloudCredentials struct {
 	APIKey      string `json:"api_key"`
