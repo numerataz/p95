@@ -185,10 +185,10 @@ function ProjectRunsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="runs">
-            Runs {runs !== undefined && `(${runs.length})`}
+            Runs {runs != null && `(${runs.length})`}
           </TabsTrigger>
           <TabsTrigger value="sweeps">
-            Sweeps {sweeps !== undefined && `(${sweeps.length})`}
+            Sweeps {sweeps != null && `(${sweeps.length})`}
           </TabsTrigger>
         </TabsList>
 
