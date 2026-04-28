@@ -427,7 +427,7 @@ func tuiCmd(args []string) {
 	// Determine which dashboard to open with 'o'
 	dashboardURL := fmt.Sprintf("http://127.0.0.1:%d", port)
 	if *remoteURL != "" {
-		dashboardURL = *remoteURL
+		dashboardURL = remoteToDashboardURL(*remoteURL)
 	}
 
 	// Create and run TUI
@@ -554,6 +554,18 @@ func expandPath(path string) string {
 		return filepath.Join(home, path[1:])
 	}
 	return path
+}
+
+// remoteToDashboardURL converts an API base URL (e.g. https://api.p.ninetyfive.gg)
+// to the web dashboard URL (e.g. https://p.ninetyfive.gg).
+func remoteToDashboardURL(apiURL string) string {
+	// Strip trailing slash for consistency
+	apiURL = strings.TrimRight(apiURL, "/")
+	// Replace "://api." with "://" to get the dashboard host
+	if i := strings.Index(apiURL, "://api."); i != -1 {
+		return apiURL[:i+3] + apiURL[i+7:]
+	}
+	return apiURL
 }
 
 func openURL(url string) {
