@@ -119,7 +119,8 @@ func cloudLoginCmd(args []string) {
 	url = strings.TrimRight(url, "/")
 
 	// Step 1: Open browser to API keys settings page
-	apiKeysURL := url + "/settings/api-keys"
+	webURL := strings.Replace(url, "://api.", "://", 1)
+	apiKeysURL := webURL + "/settings/api-keys"
 	fmt.Printf("Opening %s in your browser...\n", apiKeysURL)
 	fmt.Println("Generate a new API key and paste it below.")
 	fmt.Println()

@@ -378,6 +378,16 @@ func tuiCmd(args []string) {
 	if *apiKey == "" {
 		*apiKey = os.Getenv("P95_API_KEY")
 	}
+	if *remoteURL == "" || *apiKey == "" {
+		if creds, err := loadCredentials(); err == nil && creds != nil {
+			if *remoteURL == "" && creds.URL != "" {
+				*remoteURL = creds.URL
+			}
+			if *apiKey == "" && creds.APIKey != "" {
+				*apiKey = creds.APIKey
+			}
+		}
+	}
 
 	// Disable all logging - it breaks the TUI
 	log.SetOutput(io.Discard)
@@ -416,8 +426,8 @@ func tuiCmd(args []string) {
 
 	// Determine which dashboard to open with 'o'
 	dashboardURL := fmt.Sprintf("http://127.0.0.1:%d", port)
-	if *apiKey != "" {
-		dashboardURL = "https://api.p.ninetyfive.gg"
+	if *remoteURL != "" {
+		dashboardURL = *remoteURL
 	}
 
 	// Create and run TUI
