@@ -83,6 +83,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.ErrorMsg:
 		a.err = msg.Err
+		cmds = append(cmds, tea.Tick(4*time.Second, func(time.Time) tea.Msg {
+			return messages.ClearErrorMsg{}
+		}))
+
+	case messages.ClearErrorMsg:
+		a.err = nil
 
 	case messages.LoadingMsg:
 		a.loading = msg.Loading

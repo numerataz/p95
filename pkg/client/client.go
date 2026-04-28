@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,22 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// APIError is returned when the server responds with a non-2xx status code.
+type APIError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error: %s (status %d)", e.Body, e.StatusCode)
+}
+
+// IsNotFound reports whether err is a 404 API error.
+func IsNotFound(err error) bool {
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == 404
+}
 
 // Client is the API client for the TUI
 type Client struct {
@@ -70,7 +87,7 @@ func (c *Client) request(method, path string, body any) ([]byte, error) {
 	}
 
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("API error: %s (status %d)", string(respBody), resp.StatusCode)
+		return nil, &APIError{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 
 	return respBody, nil

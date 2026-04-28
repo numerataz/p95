@@ -187,6 +187,9 @@ func (m MainModel) loadApps() tea.Cmd {
 	return func() tea.Msg {
 		apps, err := m.client.GetApps(team.Slug)
 		if err != nil {
+			if client.IsNotFound(err) {
+				return messages.AppsLoadedMsg{Apps: nil}
+			}
 			return messages.ErrorMsg{Err: err}
 		}
 		return messages.AppsLoadedMsg{Apps: apps}
@@ -203,6 +206,9 @@ func (m MainModel) loadRuns() tea.Cmd {
 	return func() tea.Msg {
 		runs, err := m.client.GetRuns(team.Slug, app.Slug)
 		if err != nil {
+			if client.IsNotFound(err) {
+				return messages.RunsLoadedMsg{Runs: nil}
+			}
 			return messages.ErrorMsg{Err: err}
 		}
 		return messages.RunsLoadedMsg{Runs: runs}
@@ -249,10 +255,16 @@ func (m MainModel) loadRun() tea.Cmd {
 	return func() tea.Msg {
 		fullRun, err := m.client.GetRun(run.ID, true)
 		if err != nil {
+			if client.IsNotFound(err) {
+				return messages.RunLoadedMsg{Run: nil, MetricNames: nil}
+			}
 			return messages.ErrorMsg{Err: err}
 		}
 		names, err := m.client.GetMetricNames(run.ID)
 		if err != nil {
+			if client.IsNotFound(err) {
+				return messages.RunLoadedMsg{Run: nil, MetricNames: nil}
+			}
 			return messages.ErrorMsg{Err: err}
 		}
 		return messages.RunLoadedMsg{
@@ -273,6 +285,9 @@ func (m MainModel) loadMetricSeries() tea.Cmd {
 	return func() tea.Msg {
 		points, err := m.client.GetMetricSeries(runID, name, graphW-10)
 		if err != nil {
+			if client.IsNotFound(err) {
+				return messages.MetricSeriesLoadedMsg{MetricName: name, Points: nil}
+			}
 			return messages.ErrorMsg{Err: err}
 		}
 		return messages.MetricSeriesLoadedMsg{

@@ -113,11 +113,17 @@ func (m RunDetailModel) LoadRun() tea.Cmd {
 	return func() tea.Msg {
 		run, err := m.client.GetRun(m.runID, true)
 		if err != nil {
+			if client.IsNotFound(err) {
+				return messages.RunLoadedMsg{Run: nil, MetricNames: nil}
+			}
 			return messages.ErrorMsg{Err: err}
 		}
 
 		names, err := m.client.GetMetricNames(m.runID)
 		if err != nil {
+			if client.IsNotFound(err) {
+				return messages.RunLoadedMsg{Run: nil, MetricNames: nil}
+			}
 			return messages.ErrorMsg{Err: err}
 		}
 
@@ -148,6 +154,9 @@ func (m RunDetailModel) LoadMetricSeries(metricName string) tea.Cmd {
 	return func() tea.Msg {
 		points, err := m.client.GetMetricSeries(m.runID, metricName, m.width-10)
 		if err != nil {
+			if client.IsNotFound(err) {
+				return messages.MetricSeriesLoadedMsg{MetricName: metricName, Points: nil}
+			}
 			return messages.ErrorMsg{Err: err}
 		}
 		return messages.MetricSeriesLoadedMsg{

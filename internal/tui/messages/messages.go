@@ -83,6 +83,9 @@ func (e ErrorMsg) Error() string {
 	return e.Err.Error()
 }
 
+// ClearErrorMsg is sent after a short delay to dismiss the error banner.
+type ClearErrorMsg struct{}
+
 // Loading state
 type LoadingMsg struct {
 	Loading bool
