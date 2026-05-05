@@ -281,3 +281,166 @@ class P95Client:
     def share_run(self, run_id: str) -> Dict[str, Any]:
         """Create a public share link for a run."""
         return self._request("POST", f"/runs/{run_id}/share")
+
+    def log_eval(self, run_id: str, eval_data: Dict[str, Any]) -> None:
+        """
+        Log a qualitative evaluation annotation.
+
+        Args:
+            run_id: The run ID
+            eval_data: Evaluation data containing message, step, timestamp, etc.
+        """
+        self._request("POST", f"/runs/{run_id}/evals", data=eval_data)
+
+    # -------------------------------------------------------------------------
+    # Writeups
+    # -------------------------------------------------------------------------
+
+    def create_writeup(
+        self,
+        team_slug: str,
+        app_slug: str,
+        title: str,
+        content: str = "",
+    ) -> Dict[str, Any]:
+        """
+        Create a new writeup for documenting research.
+
+        Args:
+            team_slug: Team slug
+            app_slug: App slug
+            title: Writeup title
+            content: Markdown content (can include run embeds like {{run:UUID:summary}})
+
+        Returns:
+            The created writeup dictionary
+        """
+        return self._request(
+            "POST",
+            f"/teams/{team_slug}/apps/{app_slug}/notebooks",
+            data={"title": title, "content": content},
+        )
+
+    def update_writeup(
+        self,
+        team_slug: str,
+        app_slug: str,
+        writeup_id: str,
+        title: Optional[str] = None,
+        content: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Update a writeup.
+
+        Args:
+            team_slug: Team slug
+            app_slug: App slug
+            writeup_id: Writeup ID
+            title: New title (optional)
+            content: New content (optional)
+
+        Returns:
+            The updated writeup dictionary
+        """
+        data: Dict[str, Any] = {}
+        if title is not None:
+            data["title"] = title
+        if content is not None:
+            data["content"] = content
+
+        return self._request(
+            "PUT",
+            f"/teams/{team_slug}/apps/{app_slug}/notebooks/{writeup_id}",
+            data=data,
+        )
+
+    def publish_writeup(
+        self,
+        team_slug: str,
+        app_slug: str,
+        writeup_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Publish a writeup to the marketplace.
+
+        Args:
+            team_slug: Team slug
+            app_slug: App slug
+            writeup_id: Writeup ID
+
+        Returns:
+            The published writeup dictionary with share_slug
+        """
+        return self._request(
+            "POST",
+            f"/teams/{team_slug}/apps/{app_slug}/notebooks/{writeup_id}/publish",
+        )
+
+    def unpublish_writeup(
+        self,
+        team_slug: str,
+        app_slug: str,
+        writeup_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Unpublish a writeup (remove from marketplace).
+
+        Args:
+            team_slug: Team slug
+            app_slug: App slug
+            writeup_id: Writeup ID
+
+        Returns:
+            The updated writeup dictionary
+        """
+        return self._request(
+            "POST",
+            f"/teams/{team_slug}/apps/{app_slug}/notebooks/{writeup_id}/unpublish",
+        )
+
+    def get_writeup(
+        self,
+        team_slug: str,
+        app_slug: str,
+        writeup_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Get a writeup by ID.
+
+        Args:
+            team_slug: Team slug
+            app_slug: App slug
+            writeup_id: Writeup ID
+
+        Returns:
+            The writeup dictionary
+        """
+        return self._request(
+            "GET",
+            f"/teams/{team_slug}/apps/{app_slug}/notebooks/{writeup_id}",
+        )
+
+    def list_writeups(
+        self,
+        team_slug: str,
+        app_slug: str,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """
+        List writeups for an app.
+
+        Args:
+            team_slug: Team slug
+            app_slug: App slug
+            limit: Maximum number of writeups to return
+            offset: Offset for pagination
+
+        Returns:
+            List of writeup dictionaries
+        """
+        return self._request(
+            "GET",
+            f"/teams/{team_slug}/apps/{app_slug}/notebooks",
+            params={"limit": limit, "offset": offset},
+        )

@@ -41,8 +41,9 @@ from p95.run import Run, resume
 from p95.server import start_server, stop_server
 from p95.sweep import sweep, agent, should_prune, SweepConfig, ParameterSpec
 from p95.worker import Worker, WorkerCapabilities, Job, start_worker
+from p95.writeup import Writeup, create_writeup
 
-__version__ = "0.1.0"
+__version__ = "0.15.0"
 __all__ = [
     # Core
     "Run",
@@ -62,6 +63,9 @@ __all__ = [
     "WorkerCapabilities",
     "Job",
     "start_worker",
+    # Writeups
+    "Writeup",
+    "create_writeup",
     # Exceptions
     "P95Error",
     "AuthenticationError",
